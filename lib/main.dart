@@ -1,30 +1,41 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:joizone/admin/view/admin_home_screen.dart';
 import 'package:joizone/user/services/background_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'admin/model/user_model.dart';
 import 'admin/view/login_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   if (!kIsWeb) {
     await initializeService();
   }
-
   runApp(const MyApp());
 }
 
+
+
+
+Future<void> logout(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear();
+
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => LoginScreen()),
+        (route) => false,
+  );
+}
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
@@ -32,7 +43,7 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       isForegroundMode: true,
-      autoStart: false,
+      autoStart: true,
     ),
     iosConfiguration: IosConfiguration(
       autoStart: false,
@@ -42,22 +53,29 @@ Future<void> initializeService() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Joizone',
+      title: 'Track Me',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-     home:  LoginScreen(),
-     //home: EmployeeHomeScreen(userModel: userModel,),
-     //home: AdminHomeScreen(cid: "1"),
+      //home: LoginScreen(),
+      //home: EmployeeHomeScreen(userModel: userModel,),
+    home: AdminHomeScreen(cid: "1"),
     );
   }
 }

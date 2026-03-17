@@ -35,7 +35,8 @@ class _DepartmentScreenState extends State<DepartmentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Departments"),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("User Type",style: TextStyle(color: Colors.white,fontSize: 18),),
         backgroundColor: Colors.blue,
       ),
       floatingActionButton: FloatingActionButton(

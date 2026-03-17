@@ -149,13 +149,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
         title: Text(
           "Attendance (${dateKey(selectedDate)})",
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 16,color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(
+          color: Colors.white, // 🔥 icon color
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month),
+            icon: const Icon(Icons.calendar_month,color: Colors.white,),
             onPressed: () async {
               final pickedDate = await showDatePicker(
                 context: context,
@@ -184,7 +188,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             padding: const EdgeInsets.symmetric(vertical: 1,horizontal: 10),
             child: SingleChildScrollView(
               child: Container(
-                height: 750,
+                height: 550,
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade400),
                   borderRadius: BorderRadius.circular(8),
@@ -220,11 +224,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       row("Punch Out Image",
                           linkText(attendanceData?['punchOut']?['image'])),
 
-                      row("currentLat",
-                          Text(attendanceData?['currentLat']?.toString() ?? "-")),
-
-                      row("currentLng",
-                          Text(attendanceData?['currentLng']?.toString() ?? "-")),
+                      // row("currentLat",
+                      //     Text(attendanceData?['currentLat']?.toString() ?? "-")),
+                      //
+                      // row("currentLng",
+                      //     Text(attendanceData?['currentLng']?.toString() ?? "-")),
 
                       row("Shift Start",
                           Text(attendanceData?['shiftStart']?.toString() ?? "-")),
@@ -247,8 +251,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         ),
                       ),
 
-                      row("Working Hours", Text(workingHours())),
-                      row("Total break Time", Text(attendanceData?['totalBreakMinutes']?.toString() ?? "-")),
+                      // row("Working Hours", Text(workingHours())),
+                      // row("Total break Time", Text(attendanceData?['totalBreakMinutes']?.toString() ?? "-")),
                     ],
                   ),
                 ),

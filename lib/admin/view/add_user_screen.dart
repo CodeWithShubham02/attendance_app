@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:aws_s3_api/s3-2006-03-01.dart';
 import 'package:aws_s3_upload/aws_s3_upload.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:joizone/admin/controller/department_controller.dart';
 import 'package:joizone/admin/controller/shift_controller.dart';
 import 'package:joizone/admin/model/department_model.dart';
@@ -30,13 +33,16 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final phoneCtrl = TextEditingController();
   final fullAddressCtrl = TextEditingController();
   final genderCtrl=TextEditingController();
-  TextEditingController dateController = TextEditingController();
-  DateTime? selectedDate;
+  String? selectedGender;
   bool loading = false;
 
   final UserController _controller1 = UserController();
-
+  DateTime? selectedDate;
+  TextEditingController dateController = TextEditingController();
   Future<void> submitUser() async {
+    print("date of joing ${dateController}");
+    // ✅ API format (yyyy-MM-dd)
+    String apiDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
     final success = await _controller1.createUser(
       cid: "1",
       userid: useridCtrl.text,
@@ -58,7 +64,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
       shiftId: selectedShiftId ?? "",
       shiftStart: selectedShiftStart ?? "",
       shiftEnd: selectedShiftEnd ?? "",
-      dateOfJoining: dateController.text, // DD-MM-YYYY or YYYY-MM-DD
+      dateOfJoining: apiDate, // DD-MM-YYYY or YYYY-MM-DD
       imeiNo: "",
     );
     print("date of joing $dateController");
@@ -66,6 +72,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ User Created Successfully")),
       );
+      Get.back();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("❌ User not created.")),
@@ -73,7 +80,24 @@ class _AddUserScreenState extends State<AddUserScreen> {
     }
   }
 
+  Future<void> selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
 
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+
+        // ✅ UI format (dd-MM-yyyy)
+        dateController.text =
+            DateFormat('dd-MM-yyyy').format(picked);
+      });
+    }
+  }
   //branch
   final BranchController _controller = BranchController();
   List<BranchModel> branchList = [];
@@ -203,24 +227,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
       const SnackBar(content: Text("✅ Photo deleted")),
     );
   }
-  Future<void> selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
 
-    if (picked != null) {
-      setState(() {
-        selectedDate = picked;
-        dateController.text =
-        "${picked.day.toString().padLeft(2, '0')}-"
-            "${picked.month.toString().padLeft(2, '0')}-"
-            "${picked.year}";
-      });
-    }
-  }
 
   Future<void> loadBranches() async {
     final list = await _controller.getBranches("1"); // cid = 1
@@ -249,38 +256,105 @@ class _AddUserScreenState extends State<AddUserScreen> {
     // TODO: implement dispose
     super.dispose();
     photoUrl = null;
+
   }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Add User")),
+      appBar: AppBar(
+          backgroundColor: Colors.blue,
+          iconTheme: IconThemeData(color: Colors.white),
+          title: const Text("Create User",style: TextStyle(color: Colors.white,fontSize: 18),)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: useridCtrl, decoration: const InputDecoration(labelText: "User ID",border: OutlineInputBorder())),
+              child: TextField(
+                  controller: useridCtrl,
+                  decoration: const InputDecoration(
+                      hint: Row(
+                        children: [
+                          Text("User Id "),
+                          Text("*",style: TextStyle(color: Colors.red),),
+                        ],
+                      ),
+                      border: OutlineInputBorder())),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: passwordCtrl, decoration: const InputDecoration(labelText: "Password",border: OutlineInputBorder())),
+              child: TextField(controller: passwordCtrl,
+                  decoration: const InputDecoration(
+                      hint: Row(
+                        children: [
+                          Text("Password "),
+                          Text("*",style: TextStyle(color: Colors.red),),
+                        ],
+                      ),
+                  border: OutlineInputBorder())),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Full Name",border: OutlineInputBorder())),
+              child: TextField(controller: nameCtrl, decoration: const InputDecoration(
+                  hint: Row(
+                    children: [
+                      Text("Full Name "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
+                  border: OutlineInputBorder())),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: "Email",border: OutlineInputBorder())),
+              child: TextField(controller: emailCtrl, decoration: const InputDecoration(
+                  hint: Row(
+                    children: [
+                      Text("Email "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
+                  border: OutlineInputBorder())),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: "Phone",border: OutlineInputBorder())),
+              child: TextField(controller: phoneCtrl,
+                  decoration: const InputDecoration(
+                      hint: Row(
+                        children: [
+                          Text("Phone "),
+                          Text("*",style: TextStyle(color: Colors.red),),
+                        ],
+                      ),
+                      border: OutlineInputBorder())),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: genderCtrl, decoration: const InputDecoration(labelText: "Gender",border: OutlineInputBorder())),
+              child: DropdownButtonFormField<String>(
+                value: selectedGender,
+                decoration: const InputDecoration(
+                  labelText: "Gender",
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: "Male",
+                    child: Text("Male"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Female",
+                    child: Text("Female"),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedGender = value;
+                    genderCtrl.text = value ?? "";
+                    debugPrint(selectedGender);
+                    debugPrint(genderCtrl.text);
+                  });
+                },
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -306,7 +380,12 @@ class _AddUserScreenState extends State<AddUserScreen> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<String>(
-                hint: const Text("Select Branch"),
+                hint: Row(
+                  children: [
+                    Text("Select Kiosk "),
+                    Text("*",style: TextStyle(color: Colors.red),),
+                  ],
+                ),
                 value: selectedBranchId,
                 items: branchList.map((branch) {
                   return DropdownMenuItem<String>(
@@ -343,7 +422,12 @@ class _AddUserScreenState extends State<AddUserScreen> {
               padding: const EdgeInsets.all(8.0),
               child: isShiftLoading? const Center(child: CircularProgressIndicator()):
               DropdownButtonFormField<String>(
-                hint: const Text("Select Shift"),
+                hint: Row(
+                  children: [
+                    Text("Select Shift "),
+                    Text("*",style: TextStyle(color: Colors.red),),
+                  ],
+                ),
                 value: selectedShiftId,
                 items: shiftList.map((shift) {
                   return DropdownMenuItem<String>(
@@ -374,7 +458,12 @@ class _AddUserScreenState extends State<AddUserScreen> {
             Padding(padding: EdgeInsets.all(8.0),
             child: isDepartLoading?const Center(
               child: CircularProgressIndicator()):DropdownButtonFormField<String>(
-                hint: Text("Select role"),
+              hint: Row(
+                children: [
+                  Text("Select User Type "),
+                  Text("*",style: TextStyle(color: Colors.red),),
+                ],
+              ),
                 value: selectedDepartId,
                 items: departmentList.map((depart){
                   return DropdownMenuItem(
@@ -481,6 +570,22 @@ class _AddUserScreenState extends State<AddUserScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: loading ? null : submitUser,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue, // 🔥 Punch out color
+                foregroundColor: Colors.white,
+                elevation: 3,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               child: loading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text("Create User"),

@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:aws_s3_api/s3-2006-03-01.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../admin/model/user_model.dart';
@@ -44,8 +47,6 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
   @override
   void initState() {
     super.initState();
-    variant = variantList.first;
-    status = statusList.first;
   }
 
   Future<String> getLatLngString() async {
@@ -66,7 +67,7 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
 
   Future<void> pickImage() async {
     final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera, imageQuality: 70);
+        source: ImageSource.camera, imageQuality: 70,preferredCameraDevice: CameraDevice.rear,);
 
     if (image != null) {
       if (kIsWeb) {
@@ -200,9 +201,10 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
           mobileImages.clear();
           webImages.clear();
           relation = null;
-          variant = variantList.first;
-          status = statusList.first;
+          variant = null;
+          status = null;
         });
+        Get.back();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Failed to submit form")),
@@ -221,7 +223,11 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Airport Form"),
+        iconTheme: const IconThemeData(
+          color: Colors.white, // 🔥 icon color
+        ),
+        backgroundColor: Colors.blue,
+        title: const Text("Client Form",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -232,18 +238,37 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
               TextFormField(
                 controller: applicationController,
                 decoration: const InputDecoration(
-                  labelText: "Application Number",
+                  hint: Row(
+                    children: [
+                      Text("Application Number "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
                   border: OutlineInputBorder(),
                 ),
-                maxLength: 16,
-                validator: (val) =>
-                val!.length != 16 ? "Enter valid number" : null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-Z0-9 ]'), // Only letters, numbers & space
+                  ),
+                ],
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return "Application number required";
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: relation,
                 decoration: const InputDecoration(
-                  labelText: "Relation",
+
+                  hint: Row(
+                    children: [
+                      Text("Relation "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
                   border: OutlineInputBorder(),
                 ),
                 items: relationList
@@ -256,7 +281,13 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
               DropdownButtonFormField<String>(
                 value: variant,
                 decoration: const InputDecoration(
-                  labelText: "Variant",
+
+                  hint: Row(
+                    children: [
+                      Text("Variant "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
                   border: OutlineInputBorder(),
                 ),
                 items: variantList
@@ -268,7 +299,13 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
               DropdownButtonFormField<String>(
                 value: status,
                 decoration: const InputDecoration(
-                  labelText: "Status",
+
+                  hint: Row(
+                    children: [
+                      Text("Status "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
                   border: OutlineInputBorder(),
                 ),
                 items: statusList
@@ -284,17 +321,37 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
-                validator: (val) => val!.isEmpty ? "Enter remarks" : null,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-Z0-9 ]'), // Only letters, numbers & space
+                  ),
+                ],
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return "Enter remarks";
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: contactController,
                 decoration: const InputDecoration(
-                  labelText: "Contact Number",
+                  hint: Row(
+                    children: [
+                      Text("Phone "),
+                      Text("*",style: TextStyle(color: Colors.red),),
+                    ],
+                  ),
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
                 maxLength: 10,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[0-9 ]'), // Only letters, numbers & space
+                  ),
+                ],
                 validator: (val) =>
                 val!.length != 10 ? "Enter valid number" : null,
               ),
@@ -360,6 +417,22 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
                 height: 48,
                 child: ElevatedButton.icon(
                   onPressed: pickImage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue, // 🔥 Punch out color
+                    foregroundColor: Colors.white,
+                    elevation: 3,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   icon: const Icon(Icons.camera_alt),
                   label: const Text("Capture Image"),
                 ),
@@ -371,6 +444,22 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue, // 🔥 Punch out color
+                    foregroundColor: Colors.white,
+                    elevation: 3,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   child: const Text("Submit"),
                 ),
               ),

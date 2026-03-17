@@ -59,7 +59,10 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: const Text("Form Data"),
+        title: const Text("Client Submitted Form",style: TextStyle(color: Colors.white,fontSize: 16),),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_month),
@@ -83,19 +86,21 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
               Colors.blue.shade100,
             ),
             columns: const [
-              DataColumn(label: Text("UserId")),
-              DataColumn(label: Text("UserName")),
-              DataColumn(label: Text("UserCity")),
-              DataColumn(label: Text("Kiosk_name")),
-              DataColumn(label: Text("GPS Location")),
-              DataColumn(label: Text("Image")),
-              DataColumn(label: Text("App No")),
+              DataColumn(label: Text("User Id")),
+              DataColumn(label: Text("User Name")),
+              DataColumn(label: Text("User City")),
+              DataColumn(label: Text("Kiosk Name")),
+              DataColumn(label: Text("Address")),
+              DataColumn(label: Text("Snapshot")),
+              DataColumn(label: Text("Application No")),
               DataColumn(label: Text("Relation")),
               DataColumn(label: Text("Variant")),
               DataColumn(label: Text("Status")),
               DataColumn(label: Text("Report_Date")),
               DataColumn(label: Text("Report_Time")),
               DataColumn(label: Text("Remark")),
+              DataColumn(label: Text("Bank Remark")),
+              DataColumn(label: Text("Update Status")),
             ],
             rows: reports.map((r) {
               return DataRow(
@@ -108,7 +113,7 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
                   DataCell(
                     r.imageUrls.isNotEmpty
                         ? Wrap(
-                      spacing: 8,
+                      spacing: 18,
                       runSpacing: 8,
                       children: r.imageUrls.map((url) {
                         return GestureDetector(
@@ -121,10 +126,10 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
                             );
                           },
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(4),
                             child: Image.network(
                               url,
-                              height: 70,
+                              height: 50,
                               width: 70,
                               fit: BoxFit.cover,
                             ),
@@ -150,6 +155,8 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
                   DataCell(Text(r.reportDate)),
                   DataCell(Text(r.reportTime)),
                   DataCell(Text(r.remarks)),
+                  DataCell(Text(r.bankRemarks)),
+                  DataCell(Text(r.updateStatus)),
                 ],
               );
             }).toList(),

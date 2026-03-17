@@ -29,6 +29,9 @@ class ShiftController {
       },
     );
     final data = json.decode(res.body);
+    print("----------");
+    print(data);
+    print("----------");
     return data['status'] == true;
   }
 

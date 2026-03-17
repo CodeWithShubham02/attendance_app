@@ -49,11 +49,17 @@ class BranchController {
   }
   /// UPDATE
   Future<bool> updateBranch(Map<String, String> body) async {
+    print(body);
     final res = await http.post(
       Uri.parse("$baseUrl/branch_update.php"),
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
       body: body,
     );
+    print("==========");
+    print(res);
+    print(res.statusCode);
+    print(res.body);
+    print("==========");
     return json.decode(res.body)['status'] == true;
   }
 

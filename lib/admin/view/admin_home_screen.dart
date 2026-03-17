@@ -8,6 +8,8 @@ import 'package:joizone/admin/view/user_attendance_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../controller/attendance_location_controller.dart';
+import '../controller/user_controller.dart';
+import '../model/user_model.dart';
 import 'all_branch_screen.dart';
 import 'all_employee_attandance.dart';
 import 'all_employee_list.dart';
@@ -16,10 +18,13 @@ import 'assign_holiday_screen.dart';
 import 'attendance_location_screen.dart';
 import 'branch_screen.dart';
 import 'department_screen.dart';
+import 'google_map_screen.dart';
 import 'holiday_screen.dart';
+import 'location_history_screen.dart';
 import 'login_screen.dart';
 import 'monthly_attendance_screen.dart';
 import 'monthly_summary_screen.dart';
+import 'upload_remark_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   final String cid;
@@ -40,21 +45,39 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           (route) => false,
     );
   }
+  final UserController controller = UserController();
+  bool isLoading = true;
+  List<UserModel> users = [];
+  UserModel? selectedUser; // 🔹 selected user
 
+  @override
+  void initState() {
+    super.initState();
+    loadUsers();
+  }
+
+  Future<void> loadUsers() async {
+    final fetchedUsers = await controller.fetchUsers();
+    setState(() {
+      users = fetchedUsers;
+      isLoading = false;
+    });
+  }
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard"),
-        centerTitle: true,
+        backgroundColor: Colors.blue,
+        title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 18,),),
+
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout,color: Colors.white,),
             onPressed: () => logout(context),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_outlined),
+            icon: const Icon(Icons.refresh_outlined,color: Colors.white,),
             onPressed: () async {
               try {
                 final res = await http.get(
@@ -93,7 +116,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.location_on),
+            icon: const Icon(Icons.location_on,color: Colors.white,),
             onPressed: () {
               final parentContext = context;
 
@@ -104,14 +127,47 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   TextEditingController();
 
                   return AlertDialog(
-                    title: const Text("Track Users"),
-                    content: TextField(
-                      controller: attendanceController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: "Enter the userid",
-                        border: OutlineInputBorder()
-                      ),
+                    title: const Text("Real Time Location Tracking"),
+                    content: Column(
+                      children: [
+                        const Text(
+                          "Select User",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+
+                        /// 🔽 Dropdown
+                        DropdownButtonFormField<UserModel>(
+                          value: selectedUser,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                          hint: const Text("Choose User"),
+                          items: users.map((user) {
+                            return DropdownMenuItem<UserModel>(
+                              value: user,
+                              child: Text(
+                                "${user.uid} - ${user.fullName})",
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (UserModel? value) {
+                            setState(() {
+                              selectedUser = value;
+                            });
+
+                            // 🔹 Selected user id
+                            if (value != null) {
+                              debugPrint("Selected User ID: ${value.uid}");
+                            }
+                          },
+                        ),
+
+
+                      ],
                     ),
                     actions: [
                       TextButton(
@@ -121,7 +177,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       ElevatedButton(
                         onPressed: () async {
                           String attendanceId =
-                          attendanceController.text.trim();
+                          selectedUser!.uid;
                           if (attendanceId.isEmpty) return;
                           Navigator.pop(dialogContext); // close dialog
                           final data =
@@ -172,34 +228,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.8,
                 children: [
-                  _dashboardBox(
-                    title: "Create Kiosk",
-                    icon: Icons.account_tree,
-                    onTap: () {
-                      Get.to(()=>AddBranchScreen(cid:widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Create Shift",
-                    icon: Icons.schedule,
-                    onTap: () {
-                      Get.to(()=>ShiftScreen(cid:widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Create Users",
-                    icon: Icons.person_add,
-                    onTap: () {
-                     Get.to(()=>AddUserScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "All Users",
-                    icon: Icons.people,
-                    onTap: () {
-                      Get.to(()=>UsersTableScreen ());
-                    },
-                  ),
+
                   _dashboardBox(
                     title: "Daily Attendance",
                     icon: Icons.fact_check,
@@ -207,25 +236,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       Get.to(()=>AllEmployeeAttendanceScreen(cid:widget.cid));
                     },
                   ),
-                  _dashboardBox(
-                    title: "All Kiosk",
-                    icon: Icons.fact_check,
-                    onTap: () {
-                      Get.to(()=>BranchListScreen(cid: widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Create Depart..",
-                    icon: Icons.fact_check,
-                    onTap: () {
-                      Get.to(()=>DepartmentScreen(cid: widget.cid));
-                    },
-                  ),
+                  // _dashboardBox(
+                  //   title: "All Kiosk",
+                  //   icon: Icons.fact_check,
+                  //   onTap: () {
+                  //     Get.to(()=>BranchListScreen(cid: widget.cid));
+                  //   },
+                  // ),
+
                   _dashboardBox(
                     title: "Monthly Atten..",
                     icon: Icons.fact_check,
                     onTap: () {
-                      Get.to(()=>MonthlyAttendanceScreen(cid:"1"));
+                      Get.to(()=>MonthlyAttendanceScreen(cid:widget.cid));
                     },
                   ),
                   _dashboardBox(
@@ -249,11 +272,71 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   //     Get.to(()=>HolidayScreen());
                   //   },
                   // ),
+
+
+
                   _dashboardBox(
-                    title: "User Holiday",
+                    title: "Upload Remark",
+                    icon: Icons.person,
+                    onTap: () {
+                      Get.to(()=>UploadRemarkScreen());
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "Location History",
+                    icon: Icons.location_on_rounded,
+                    onTap: () {
+                      Get.to(()=>LocationHistoryScreen());
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "Active Users \n Map",
+                    icon: Icons.location_on_outlined,
+                    onTap: () {
+                      Get.to(()=>GoogleMapScreen(cid:widget.cid));
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "Create Users",
+                    icon: Icons.person_add,
+                    onTap: () {
+                      Get.to(()=>AddUserScreen());
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "All Users",
+                    icon: Icons.people,
+                    onTap: () {
+                      Get.to(()=>UsersTableScreen ());
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "Roster",
                     icon: Icons.weekend_outlined,
                     onTap: () {
                       Get.to(()=>AssignHolidayScreen());
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "Create Kiosk",
+                    icon: Icons.account_tree,
+                    onTap: () {
+                      Get.to(()=>AddBranchScreen(cid:widget.cid));
+                    },
+                  ),
+
+                  _dashboardBox(
+                    title: "Create Shift",
+                    icon: Icons.schedule,
+                    onTap: () {
+                      Get.to(()=>ShiftScreen(cid:widget.cid));
+                    },
+                  ),
+                  _dashboardBox(
+                    title: "User Type.",
+                    icon: Icons.fact_check,
+                    onTap: () {
+                      Get.to(()=>DepartmentScreen(cid: widget.cid));
                     },
                   ),
                   _dashboardBox(
@@ -263,6 +346,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       Get.to(()=>UserAttendanceDetailScreen());
                     },
                   ),
+
                 ],
               ),
             ),
@@ -280,32 +364,42 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          side: const BorderSide(
+            color: Colors.blue, // 🔥 Border color
+            width: 1.5,
+          ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 30, color: Colors.blue),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 30, color: Colors.blue),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

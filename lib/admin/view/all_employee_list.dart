@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import '../controller/user_controller.dart';
 import '../model/user_model.dart';
 
@@ -22,6 +24,13 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
 
   Future<void> loadUsers() async {
     users = await controller.fetchUsers();
+    filteredUsers = users;
+
+    branchList = users
+        .map((e) => e.branchName)
+        .toSet()
+        .toList();
+
     setState(() => isLoading = false);
   }
   void editUser(UserModel user) {
@@ -91,9 +100,11 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                         decoration: const InputDecoration(labelText: "Distance")),
                     TextField(
                         controller: branchLatController,
+
                         decoration: const InputDecoration(labelText: "Lat")),
                     TextField(
                         controller: branchLongController,
+
                         decoration: const InputDecoration(labelText: "Long")),
 
                     TextField(
@@ -182,123 +193,226 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
     print("Delete user: ${user.fullName}");
     // TODO: Call delete API and refresh table
   }
+  final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+  Set<String> selectedBranches = {};
+  List<UserModel> filteredUsers = [];
+  List<String> branchList = [];
 
+  void applyBranchFilter() {
+    setState(() {
+      if (selectedBranches.isEmpty) {
+        filteredUsers = users;
+      } else {
+        filteredUsers = users
+            .where((u) => selectedBranches.contains(u.branchName))
+            .toList();
+      }
+    });
+  }
+  void showBranchFilter() {
+    Set<String> tempSelected = Set.from(selectedBranches);
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Filter by Branch"),
+          content: SizedBox(
+            width: 300,
+            height: 400,
+            child: ListView(
+              children: branchList.map((branch) {
+                return CheckboxListTile(
+                  title: Text(branch),
+                  value: tempSelected.contains(branch),
+                  onChanged: (val) {
+                    if (val == true) {
+                      tempSelected.add(branch);
+                    } else {
+                      tempSelected.remove(branch);
+                    }
+                    setState(() {});
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                selectedBranches.clear();
+                applyBranchFilter();
+                Navigator.pop(context);
+              },
+              child: const Text("Clear"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                selectedBranches = tempSelected;
+                applyBranchFilter();
+                Navigator.pop(context);
+              },
+              child: const Text("Apply"),
+            ),
+          ],
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Users List")),
+      appBar: AppBar(
+          backgroundColor: Colors.blue,
+          iconTheme: IconThemeData(color: Colors.white),
+          title: const Text("All Users",style: TextStyle(color: Colors.white),),
+      actions: [
+        IconButton(onPressed: (){
+          //download the excel file
+          Get.snackbar("Working..", "");
+        }, icon:Icon(Icons.download))
+      ],),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        scrollDirection: Axis.vertical,
+          : Scrollbar(
+        controller: _horizontalController,
+        thumbVisibility: true,
+        trackVisibility: true,
         child: SingleChildScrollView(
+          controller: _horizontalController,
           scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
-            child: DataTable(
-              headingRowColor:
-              MaterialStateProperty.all(Colors.grey.shade300),
-              border: TableBorder.all(
-                color: Colors.black54,
-                width: 1,
-              ),
-              columns: const [
-                DataColumn(label: Text("Action")),
-                DataColumn(label: Text("UID")),
-                DataColumn(label: Text("CID")),
-                DataColumn(label: Text("UserID")),
-                DataColumn(label: Text("Password")),
-                DataColumn(label: Text("Token")),
-                DataColumn(label: Text("Image")),
-                DataColumn(label: Text("IMEI")),
-                DataColumn(label: Text("Full Name")),
-                DataColumn(label: Text("Email")),
-                DataColumn(label: Text("Phone")),
-                DataColumn(label: Text("Gender")),
-                DataColumn(label: Text("Address")),
-                DataColumn(label: Text("Branch ID")),
-                DataColumn(label: Text("Branch Name")),
-                DataColumn(label: Text("Distance")),
-                DataColumn(label: Text("Lat")),
-                DataColumn(label: Text("Long")),
-                DataColumn(label: Text("Dept ID")),
-                DataColumn(label: Text("Dept Name")),
-                DataColumn(label: Text("Shift ID")),
-                DataColumn(label: Text("Shift Start")),
-                DataColumn(label: Text("Shift End")),
-                DataColumn(label: Text("Joining Date")),
-                DataColumn(label: Text("Status")),
-                DataColumn(label: Text("Role")),
-                DataColumn(label: Text("Created At")),
-                DataColumn(label: Text("Updated At")),
-              ],
-              rows: users.map((u) {
-                return DataRow(cells: [
-                  DataCell(Row(
+          child: Scrollbar(
+            controller: _verticalController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            child: SingleChildScrollView(
+              controller: _verticalController,
+              scrollDirection: Axis.vertical,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: MediaQuery.of(context).size.width,
+                ),
+                child: DataTable(
+                  columnSpacing: 20,
+                  headingRowColor: MaterialStateProperty.all(
+                    Colors.grey.shade300,
+                  ),
+                  border: TableBorder.all(
+                    color: Colors.black54,
+                    width: 1,
+                  ),
+                  columns:  [
+                    DataColumn(label: Text("Action")),
+                    DataColumn(label: Text("UID")),
+                    DataColumn(label: Text("UserID")),
+                    DataColumn(label: Text("Password")),
+                DataColumn(
+                  label: Row(
                     children: [
+                      const Text("Office Name"),
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => editUser(u),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => deleteUser(u),
+                        icon: Icon(
+                          Icons.filter_list,
+                          size: 18,
+                          color: selectedBranches.isNotEmpty
+                              ? Colors.blue
+                              : Colors.grey,
+                        ),
+                        onPressed: showBranchFilter,
                       ),
                     ],
-                  )),
-                  DataCell(Text(u.uid)),
-                  DataCell(Text(u.cid)),
-                  DataCell(Text(u.userid)),
-                  DataCell(Text(u.password)),
-                  DataCell(Text(u.userToken)),
-                  //DataCell(Text(u.userImg)),
-                  DataCell(
-                    u.userImg != null &&
-                        u.userImg.toString().isNotEmpty
-                        ? Image.network(
-                      u.userImg,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.broken_image),
-                    )
-                        : const Icon(Icons.image_not_supported),
                   ),
-                  DataCell(Text(u.imeiNo)),
-                  DataCell(Text(u.fullName)),
-                  DataCell(Text(u.userEmail)),
-                  DataCell(Text(u.userPhone)),
-                  DataCell(Text(u.gender)),
-                  DataCell(Text(u.fullAddress)),
-                  DataCell(Text(u.branchId)),
-                  DataCell(Text(u.branchName)),
-                  DataCell(Text(u.branchDistance)),
-                  DataCell(Text(u.branchLat)),
-                  DataCell(Text(u.branchLong)),
-                  DataCell(Text(u.departmentId)),
-                  DataCell(Text(u.departmentName)),
-                  DataCell(Text(u.shiftId)),
-                  DataCell(Text(u.shiftStart)),
-                  DataCell(Text(u.shiftEnd)),
-                  DataCell(Text(u.dateOfJoining)),
-                  DataCell(Text(
-                    u.status,
-                    style: TextStyle(
-                      color: u.status.toLowerCase() == 'active'
-                          ? Colors.green
-                          : Colors.red,
-                    ),
-                  )),
-                  DataCell(Text(u.role)),
-                  DataCell(Text(u.createdAt)),
-                  DataCell(Text(u.updatedAt)),
-                ]);
-              }).toList(),
+                ),
+                    DataColumn(label: Text("Image")),
+                    DataColumn(label: Text("IMEI")),
+                    DataColumn(label: Text("Full Name")),
+                    DataColumn(label: Text("Email")),
+                    DataColumn(label: Text("Phone")),
+                    DataColumn(label: Text("Gender")),
+                    DataColumn(label: Text("Address")),
+                    DataColumn(label: Text("Distance")),
+                    DataColumn(label: Text("Lat")),
+                    DataColumn(label: Text("Long")),
+                    DataColumn(label: Text("User Type")),
+                    DataColumn(label: Text("Shift Start")),
+                    DataColumn(label: Text("Shift End")),
+                    DataColumn(label: Text("Joining Date")),
+                    DataColumn(label: Text("Status")),
+                    DataColumn(label: Text("Role")),
+                    DataColumn(label: Text("Created At")),
+                    DataColumn(label: Text("Updated At")),
+                  ],
+                  rows: filteredUsers.map((u) {
+                    return DataRow(cells: [
+                      DataCell(Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => editUser(u),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => deleteUser(u),
+                          ),
+                        ],
+                      )),
+                      DataCell(Text(u.uid)),
+                     // DataCell(Text(u.cid)),
+                      DataCell(Text(u.userid)),
+                      DataCell(Text(u.password)),
+                      DataCell(Text(u.branchName)),
+                      //DataCell(Text(u.userToken)),
+                      DataCell(
+                        u.userImg != null &&
+                            u.userImg.toString().isNotEmpty
+                            ? Image.network(
+                          u.userImg,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
+                        )
+                            : const Icon(Icons.image_not_supported),
+                      ),
+                      DataCell(Text(u.imeiNo)),
+                      DataCell(Text(u.fullName)),
+                      DataCell(Text(u.userEmail)),
+                      DataCell(Text(u.userPhone)),
+                      DataCell(Text(u.gender)),
+                      DataCell(Text(u.fullAddress)),
+                      //DataCell(Text(u.branchId)),
+                      DataCell(Text(u.branchDistance)),
+                      DataCell(Text(u.branchLat)),
+                      DataCell(Text(u.branchLong)),
+                      //DataCell(Text(u.departmentId)),
+                      DataCell(Text(u.departmentName)),
+                      //DataCell(Text(u.shiftId)),
+                      DataCell(Text(u.shiftStart)),
+                      DataCell(Text(u.shiftEnd)),
+                      DataCell(Text(u.dateOfJoining)),
+                      DataCell(Text(
+                        u.status,
+                        style: TextStyle(
+                          color: u.status.toLowerCase() == 'active'
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      )),
+                      DataCell(Text(u.role)),
+
+                      DataCell(Text(u.createdAt)),
+                      DataCell(Text(u.updatedAt)),
+                    ]);
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ),
       ),
+
     );
   }
 }

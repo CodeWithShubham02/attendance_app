@@ -100,7 +100,22 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
       ),
     );
   }
+  String formatTime12(String? time) {
+    if (time == null || time.isEmpty || time == "-") return "-";
 
+    try {
+      final dt = DateTime.parse(time);
+      int hour = dt.hour;
+      String period = hour >= 12 ? "PM" : "AM";
+
+      hour = hour % 12;
+      if (hour == 0) hour = 12;
+
+      return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
+    } catch (e) {
+      return "-";
+    }
+  }
   /// 📊 ATTENDANCE TABLE
   Widget buildAttendanceTable() {
     return SingleChildScrollView(
@@ -115,7 +130,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
         ),
         columns: const [
           DataColumn(label: Text("Name")),
-          DataColumn(label: Text("Dept")),
+          DataColumn(label: Text("User Type")),
           DataColumn(label: Text("Status")),
           DataColumn(label: Text("Shift")),
           DataColumn(label: Text("Punch In")),
@@ -172,6 +187,9 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
+        iconTheme: const IconThemeData(
+          color: Colors.white, // 🔥 icon color
+        ),
         title: isSearching
             ? TextField(
           controller: searchController,
@@ -184,7 +202,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
           style: const TextStyle(color: Colors.white),
           onChanged: filterByName,
         )
-            : Text("Attendance - ${widget.officeName}"),
+            : Text("Attendance - ${widget.officeName}",style: TextStyle(color: Colors.white),),
         actions: [
           IconButton(
             icon: Icon(

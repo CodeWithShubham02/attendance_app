@@ -85,39 +85,7 @@ class _AllEmployeeAttendanceScreenState
   }
 
   // ---------------- FILTER ----------------
-  void showFilterDialog() {
-    final TextEditingController ctrl =
-    TextEditingController(text: selectedDepartment);
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Filter Kiosk "),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Kiosk Name",
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                selectedDepartment =
-                ctrl.text.trim().isEmpty ? null : ctrl.text.trim();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text("Apply"),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---------------- GOOGLE MAP ----------------
   Future<void> openGoogleMap(double lat, double lng) async {
@@ -324,6 +292,9 @@ class _AllEmployeeAttendanceScreenState
       );
     }
   }
+  final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+
   void _showImageDialog(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -378,212 +349,468 @@ class _AllEmployeeAttendanceScreenState
       },
     );
   }
+  // ---------------- FILTER SETS ----------------
+  Set<String> selectedName = {};
+  Set<String> selectedOffice = {};
+  Set<String> selectedStatus = {};
+  Set<String> selectedDepartment1 = {};
+
+  void applyFilters() {
+    setState(() {});
+  }
+
+  List<String> getUniqueValues(String key) {
+    return attendanceRecords
+        .map((e) => e[key]?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
+
+  void showMultiFilterDialog({
+    required String title,
+    required List<String> options,
+    required Set<String> selectedValues,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text("Filter $title"),
+              content: SizedBox(
+                width: 300,
+                height: 400,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        children: options.map((value) {
+                          return CheckboxListTile(
+                            value: selectedValues.contains(value),
+                            title: Text(value),
+                            onChanged: (checked) {
+                              setStateDialog(() {
+                                if (checked == true) {
+                                  selectedValues.add(value);
+                                } else {
+                                  selectedValues.remove(value);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            selectedValues.clear();
+                            applyFilters();
+                            Navigator.pop(context);
+                          },
+                          child: const Text("Reset"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            applyFilters();
+                            Navigator.pop(context);
+                          },
+                          child: const Text("Apply"),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filteredRecords = selectedDepartment == null
-        ? attendanceRecords
-        : attendanceRecords
-        .where((e) => e['office_name']
-        .toString()
-        .toLowerCase()
-        .contains(selectedDepartment!.toLowerCase()))
-        .toList();
+    final filteredRecords = attendanceRecords.where((row) {
+      final officeMatch = selectedOffice.isEmpty ||
+          selectedOffice.contains(row['office_name']);
+      final nameMatch = selectedName.isEmpty ||
+          selectedName.contains(row['name']);
+      final statusMatch = selectedStatus.isEmpty ||
+          selectedStatus.contains(row['status']);
+
+      final deptMatch = selectedDepartment1.isEmpty ||
+          selectedDepartment1.contains(row['department']);
+
+      return officeMatch && nameMatch && statusMatch && deptMatch;
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Employee Attendance"),
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("Daily Attendance",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
           IconButton(
               icon: const Icon(Icons.calendar_today),
               onPressed: pickDate),
-          IconButton(
-              icon: const Icon(Icons.filter_alt),
-              onPressed: showFilterDialog),
         ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : filteredRecords.isEmpty
           ? const Center(child: Text("No attendance found"))
-          : SingleChildScrollView(
-        scrollDirection: Axis.vertical,
+          : Scrollbar(
+        controller: _horizontalController,
+        thumbVisibility: true,
+        trackVisibility: true,
         child: SingleChildScrollView(
+          controller: _horizontalController,
           scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor:
-            MaterialStateProperty.all(Colors.grey.shade300),
-            border: TableBorder.all(
-              color: Colors.black54,
-              width: 1,
-            ),
-            columns: const [
-              DataColumn(label: Text("Location")),
-              DataColumn(label: Text("Date")),
-              DataColumn(label: Text("Attendance ID")),
-              DataColumn(label: Text("Name")),
-              DataColumn(label: Text("Office Name")),
-              DataColumn(label: Text("Department")),
-              DataColumn(label: Text("Punch In")),
-              DataColumn(label: Text("Punch In Remark")),
-              DataColumn(label: Text("Punch In Image")),
-              DataColumn(label: Text("Punch Out")),
-              DataColumn(label: Text("Punch Out Remark")),
-              DataColumn(label: Text("Punch Out Image")),
-              DataColumn(label: Text("Status")),
-              DataColumn(label: Text("Late")),
-              DataColumn(label: Text("Working Hours")),
-              DataColumn(label: Text("Break Min")),
-            ],
-            rows: filteredRecords.map((e) {
-              DateTime? punchIn = e['punch_in_time'] != null
-                  ? DateTime.parse(e['punch_in_time'])
-                  : null;
-              DateTime? punchOut = e['punch_out_time'] != null
-                  ? DateTime.parse(e['punch_out_time'])
-                  : null;
-
-              String working = "-";
-              if (punchIn != null && punchOut != null) {
-                final diff = punchOut.difference(punchIn);
-                working =
-                "${diff.inHours}h ${diff.inMinutes % 60}m";
-              }
-              print("-----------------");
-              print(e['punch_in_image']);
-              print("-----------------");
-              return DataRow(cells: [
-
-                DataCell(
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.location_on,
-                            color: Colors.red),
-                        onPressed: () async{
-                          final id=e['id'];
-                          final res = await http.get(
-                            Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_current_location.php?attendance_id=$id"),
-                          );
-                          print(res);
-                          final json = jsonDecode(res.body);
-                          print(json);
-                          if (json['status']) {
-                            double lat = double.parse(json['data']['latitude']);
-                            double lng = double.parse(json['data']['longitude']);
-
-                            openGoogleMap(lat, lng);
-                          }
-
-                        },
-                      ),
-                      IconButton(onPressed: () {
-              final attendanceId = e['id']; // 👈 attendance id
-
-                  showUpdateStatusDialog(
-                  context: context,
-                  attendanceId: attendanceId.toString(),
-                  );
-              }, icon: Icon(Icons.edit)),
-                      IconButton(
-                        icon: const Icon(Icons.delete,
-                            color: Colors.red),
-                        onPressed: () async{
-                          final attendanceId=e['id'] ?? '-';
-                          print(attendanceId);
-                          final res = await http.post(
-                            Uri.parse("https://fms.bizipac.com/apinew/attendance/delete_attendance_by_id.php"),
-                            body: {
-                              "attendance_id": attendanceId,
-                            },
-                          );
-                          if (res.statusCode == 200) {
-                            final data = jsonDecode(res.body);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Attendance deleted (ID: $attendanceId)"),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-
-                            // 🔙 Go back & notify previous screen
-                            Navigator.pop(context, true);
-                          }
-                        },
-                      ),
-                    ],
+          child: Scrollbar(
+            controller: _verticalController,
+            thumbVisibility: true,
+            trackVisibility: true,
+            child: SingleChildScrollView(
+              controller: _verticalController,
+              scrollDirection: Axis.vertical,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: MediaQuery.of(context).size.width,
+                ),
+                child: DataTable(
+                  dataRowMinHeight: 60,   // minimum height
+                  dataRowMaxHeight: 100,   // maximum height
+                  headingRowHeight: 50,   // heading row height
+                  columnSpacing: 20,
+                  headingRowColor:
+                  MaterialStateProperty.all(
+                      Colors.grey.shade300),
+                  border: TableBorder.all(
+                    color: Colors.black54,
+                    width: 1,
                   ),
-
-                ),
-                DataCell(Text(e['created_at'] ?? '-')),
-                DataCell(Text(e['id'] ?? '-')),
-                DataCell(Text(e['name'] ?? '-')),
-                DataCell(Text(e['office_name'] ?? '-')),
-                DataCell(Text(e['department'] ?? '-')),
-                DataCell(Text(punchIn != null
-                    ? DateFormat('HH:mm').format(punchIn)
-                    : '-')),
-                DataCell(Text(e['punch_in_remark'] ?? '-')),
-                DataCell(
-                  e['punch_in_image'] != null &&
-                      e['punch_in_image'].toString().isNotEmpty
-                      ? InkWell(
-                    onTap: () {
-                      _showImageDialog(
-                        context,
-                        e['punch_in_image'],
-                      );
-                    },
-                    child: Image.network(
-                      e['punch_in_image'],
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.broken_image),
+                  columns: [
+                    const DataColumn(label: Text("Location")),
+                    const DataColumn(label: Text("Date")),
+                    const DataColumn(label: Text("Uid")),
+                    const DataColumn(label: Text("aid")),
+                    DataColumn(
+                      label: Row(
+                        children: [
+                          const Text("Name"),
+                          const SizedBox(width: 5),
+                          InkWell(
+                            onTap: () {
+                              showMultiFilterDialog(
+                                title: "Name",
+                                options:
+                                getUniqueValues('name'),
+                                selectedValues: selectedName,
+                              );
+                            },
+                            child: Icon(
+                              Icons.filter_list,
+                              size: 18,
+                              color: selectedName.isNotEmpty
+                                  ? Colors.blue
+                                  : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )
-                      : const Icon(Icons.image_not_supported),
-                ),
-
-                DataCell(Text(punchOut != null
-                    ? DateFormat('HH:mm').format(punchOut)
-                    : '-')),
-                DataCell(Text(e['punch_out_remark'] ?? '-')),
-                DataCell(
-                  e['punch_out_image'] != null &&
-                      e['punch_out_image'].toString().isNotEmpty
-                      ? InkWell(
-                    onTap: () {
-                      _showImageDialog(
-                        context,
-                        e['punch_out_image'],
-                      );
-                    },
-                    child: Image.network(
-                      e['punch_out_image'],
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.broken_image),
+                    DataColumn(
+                      label: Row(
+                        children: [
+                          const Text("Office Name"),
+                          const SizedBox(width: 5),
+                          InkWell(
+                            onTap: () {
+                              showMultiFilterDialog(
+                                title: "Office Name",
+                                options:
+                                getUniqueValues('office_name'),
+                                selectedValues: selectedOffice,
+                              );
+                            },
+                            child: Icon(
+                              Icons.filter_list,
+                              size: 18,
+                              color: selectedOffice.isNotEmpty
+                                  ? Colors.blue
+                                  : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )
-                      : const Icon(Icons.image_not_supported),
+                    DataColumn(
+                      label: Row(
+                        children: [
+                          const Text("User Type"),
+                          const SizedBox(width: 5),
+                          InkWell(
+                            onTap: () {
+                              showMultiFilterDialog(
+                                title: "User Type",
+                                options:
+                                getUniqueValues('department'),
+                                selectedValues: selectedDepartment1,
+                              );
+                            },
+                            child: Icon(
+                              Icons.filter_list,
+                              size: 18,
+                              color: selectedDepartment1.isNotEmpty
+                                  ? Colors.blue
+                                  : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const DataColumn(label: Text("Shift Time")),
+                    const DataColumn(label: Text("Punch In Time")),
+                    const DataColumn(label: Text("Punch In Remark")),
+                    const DataColumn(label: Text("Punch In Image")),
+                    const DataColumn(label: Text("Punch Out Time")),
+                    const DataColumn(label: Text("Punch Out Remark")),
+                    const DataColumn(label: Text("Punch Out Image")),
+                    DataColumn(
+                      label: Row(
+                        children: [
+                          const Text("Status"),
+                          const SizedBox(width: 5),
+                          InkWell(
+                            onTap: () {
+                              showMultiFilterDialog(
+                                title: "Status",
+                                options:
+                                getUniqueValues('status'),
+                                selectedValues: selectedStatus,
+                              );
+                            },
+                            child: Icon(
+                              Icons.filter_list,
+                              size: 18,
+                              color: selectedStatus.isNotEmpty
+                                  ? Colors.blue
+                                  : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // DataColumn(label: Text("Late")),
+                    const DataColumn(label: Text("Working Hours")),
+                    // DataColumn(label: Text("Break Min")),
+                  ],
+
+                  rows: filteredRecords.map((e) {
+                    DateTime? punchIn =
+                    e['punch_in_time'] != null
+                        ? DateTime.parse(
+                        e['punch_in_time'])
+                        : null;
+
+                    DateTime? punchOut =
+                    e['punch_out_time'] != null
+                        ? DateTime.parse(
+                        e['punch_out_time'])
+                        : null;
+
+                    String working = "-";
+                    if (punchIn != null &&
+                        punchOut != null) {
+                      final diff =
+                      punchOut.difference(punchIn);
+                      working =
+                      "${diff.inHours}h ${diff.inMinutes % 60}m";
+                    }
+
+                    return DataRow(cells: [
+
+                      DataCell(
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.location_on,
+                                  color: Colors.red),
+                              onPressed: () async{
+                                final id=e['id'];
+                                final res = await http.get(
+                                  Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_current_location.php?attendance_id=$id"),
+                                );
+                                print(res);
+                                final json = jsonDecode(res.body);
+                                print(json);
+                                if (json['status']) {
+                                  double lat = double.parse(json['data']['latitude']);
+                                  double lng = double.parse(json['data']['longitude']);
+
+                                  openGoogleMap(lat, lng);
+                                }
+
+                              },
+                            ),
+
+                            IconButton(
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.red),
+                              onPressed: () async{
+                                final attendanceId=e['id'] ?? '-';
+                                print(attendanceId);
+                                final res = await http.post(
+                                  Uri.parse("https://fms.bizipac.com/apinew/attendance/delete_attendance_by_id.php"),
+                                  body: {
+                                    "attendance_id": attendanceId,
+                                  },
+                                );
+                                if (res.statusCode == 200) {
+                                  final data = jsonDecode(res.body);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Attendance deleted (ID: $attendanceId)"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+
+                                  // 🔙 Go back & notify previous screen
+                                  Navigator.pop(context, true);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+
+                      ),
+
+                      DataCell(
+                        Text(
+                          e['created_at'] != null
+                              ? DateFormat('dd-MM-yyyy')
+                              .format(DateTime.parse(e['created_at']))
+                              : '-',
+                        ),
+                      ),
+                      DataCell(Text(e['uid'] ?? '-')),
+                      DataCell(Text(e['id'] ?? '-')),
+                      DataCell(Text(e['name'] ?? '-')),
+                      DataCell(Text(e['office_name'] ?? '-')),
+                      DataCell(Text(e['department'] ?? '-')),
+                      DataCell(
+                        Row(
+                          children: [
+                            Text(
+                              e['shift_start'] != null
+                                  ? DateFormat('hh:mm a').format(
+                                DateFormat('HH:mm:ss').parse(e['shift_start']),
+                              )
+                                  : '-',
+                            ),
+                            const Text(" - "),
+                            Text(
+                              e['shift_end'] != null
+                                  ? DateFormat('hh:mm a').format(
+                                DateFormat('HH:mm:ss').parse(e['shift_end']),
+                              )
+                                  : '-',
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          punchIn != null
+                              ? DateFormat('hh:mm a').format(punchIn)
+                              : '-',
+                        ),
+                      ),
+                      DataCell(
+                          Text(e['punch_in_remark'] ?? '-')),
+                      DataCell(
+                        e['punch_in_image'] != null &&
+                            e['punch_in_image']
+                                .toString()
+                                .isNotEmpty
+                            ? InkWell(
+                          onTap: (){
+                            _showImageDialog(
+                              context,
+                              e['punch_in_image'],
+                            );
+                          },
+                              child: Image.network(
+                                                        e['punch_in_image'],
+                                                        width: 100,
+                                                        height: 200,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                (_, __, ___) =>
+                                                        const Icon(Icons
+                                .broken_image),
+                                                      ),
+                            )
+                            : const Icon(Icons
+                            .image_not_supported),
+                      ),
+                      DataCell(
+                        Text(
+                          punchOut != null
+                              ? DateFormat('hh:mm a').format(punchOut)
+                              : '-',
+                        ),
+                      ),
+                      DataCell(Text(
+                          e['punch_out_remark'] ?? '-')),
+                      DataCell(
+                        e['punch_out_image'] != null &&
+                            e['punch_out_image']
+                                .toString()
+                                .isNotEmpty
+                            ? InkWell(
+                          onTap: (){
+                            _showImageDialog(
+                              context,
+                              e['punch_out_image'],
+                            );
+                          },
+                              child: Image.network(
+                                                        e['punch_out_image'],
+                                width: 100,
+                                height: 200,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                (_, __, ___) =>
+                                                        const Icon(Icons
+                                .broken_image),
+                                                      ),
+                            )
+                            : const Icon(Icons
+                            .image_not_supported),
+                      ),
+                      DataCell(Text(e['status'] ?? '-')),
+                      // DataCell(Text(e['late'] ?? '-')),
+                      DataCell(Text(working)),
+                      // DataCell(Text(
+                      //     e['total_break_minutes']
+                      //         ?.toString() ??
+                      //         '-')),
+                    ]);
+                  }).toList(),
                 ),
-                DataCell(Text(e['status'] ?? '-')),
-                DataCell(Text(e['late'] ?? '-')),
-                DataCell(Text(working)),
-                DataCell(Text(
-                    e['total_break_minutes']?.toString() ?? '-')),
-              ]);
-            }).toList(),
+              ),
+            ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: exportAttendancePdf,
-        child: const Icon(Icons.download),
-      ),
+
     );
   }
 }

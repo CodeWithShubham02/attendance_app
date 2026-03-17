@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../controller/shift_controller.dart';
 import '../model/shift_model.dart';
 
@@ -25,18 +26,33 @@ class _ShiftScreenState extends State<ShiftScreen> {
   }
 
   Future<void> loadShifts() async {
+    setState(() {
+      isLoading = true;
+    });
+
     final data = await controller.fetchShifts(widget.cid);
+
+    if (!mounted) return;
+
     setState(() {
       shifts = data;
       isLoading = false;
     });
   }
-
+  String _formatTime(String time24) {
+    try {
+      final parsedTime = DateFormat("HH:mm:ss").parse(time24);
+      return DateFormat("hh:mm a").format(parsedTime);
+    } catch (e) {
+      return time24; // fallback if format unexpected
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Shifts"),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("Shifts Master",style: TextStyle(color: Colors.white,fontSize: 18),),
         backgroundColor: Colors.blue,
       ),
       floatingActionButton: FloatingActionButton(
@@ -52,7 +68,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
           return Card(
             child: ListTile(
               title: Text(
-                  "${shift.shiftStart} - ${shift.shiftEnd}"),
+                "${_formatTime(shift.shiftStart)} - ${_formatTime(shift.shiftEnd)}",
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -79,17 +96,23 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false, // prevents outside close
       builder: (_) => _shiftDialog(
-        title: "Add Shift",
+        title: "Add Shift 24 pr wise add shift",
         onSave: () async {
           final success = await controller.addShift(
             widget.cid,
-            startCtrl.text,
-            endCtrl.text,
+            startCtrl.text.trim(),
+            endCtrl.text.trim(),
           );
+
           if (success) {
-            Navigator.pop(context);
-            loadShifts();
+            Navigator.of(context, rootNavigator: true).pop(); // close dialog
+            await loadShifts(); // refresh list
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Shift Added Successfully")),
+            );
           }
         },
       ),
@@ -102,17 +125,23 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => _shiftDialog(
         title: "Edit Shift",
         onSave: () async {
           final success = await controller.updateShift(
             shift.shiftId,
-            startCtrl.text,
-            endCtrl.text,
+            startCtrl.text.trim(),
+            endCtrl.text.trim(),
           );
+
           if (success) {
-            Navigator.pop(context);
-            loadShifts();
+            Navigator.of(context, rootNavigator: true).pop();
+            await loadShifts();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Shift Updated Successfully")),
+            );
           }
         },
       ),
@@ -120,7 +149,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
   }
 
   Widget _shiftDialog(
-      {required String title, required VoidCallback onSave}) {
+      {required String title,
+        required Future<void> Function() onSave,}) {
     return AlertDialog(
       title: Text(title),
       content: Column(
@@ -168,8 +198,15 @@ class _ShiftScreenState extends State<ShiftScreen> {
     );
 
     if (confirm == true) {
-      await controller.deleteShift(shiftId);
-      loadShifts();
+      final success = await controller.deleteShift(shiftId);
+
+      if (success) {
+        await loadShifts();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Shift Deleted Successfully")),
+        );
+      }
     }
   }
 }

@@ -27,6 +27,7 @@ class PunchData {
   final String punchOutRemark;
   final String punchInImage;
   final String punchOutImage;
+  final int total_break_minutes;
 
   PunchData({
     required this.punchIn,
@@ -35,6 +36,7 @@ class PunchData {
     required this.punchOutRemark,
     required this.punchInImage,
     required this.punchOutImage,
+    required this.total_break_minutes,
   });
 
   factory PunchData.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class PunchData {
       punchOutRemark: json['punch_out_remark'] ?? '',
       punchInImage: json['punch_in_image'] ?? '',
       punchOutImage: json['punch_out_image'] ?? '',
+      total_break_minutes: json['total_break_minutes'] ?? '',
     );
   }
 }

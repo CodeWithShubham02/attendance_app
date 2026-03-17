@@ -53,7 +53,10 @@ class _EditBranchScreenState extends State<EditBranchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Edit Branch")),
+      appBar: AppBar(
+          backgroundColor: Colors.blue,
+          iconTheme: IconThemeData(color: Colors.white),
+          title: const Text("Edit Branch",style: TextStyle(color: Colors.white,fontSize: 18),)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

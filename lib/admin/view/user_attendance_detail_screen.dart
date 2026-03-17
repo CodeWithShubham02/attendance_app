@@ -86,13 +86,67 @@ class _UserAttendanceDetailScreenState
       ),
     );
   }
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) {
+        return Dialog(
+          insetPadding: EdgeInsets.zero, // 🔥 full screen
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              // 🔍 Zoomable image
+              InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Center(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image,
+                      color: Colors.white,
+                      size: 80,
+                    ),
+                  ),
+                ),
+              ),
 
+              // ❌ Close button
+              Positioned(
+                top: 30,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Attendance Details"),
-        backgroundColor: Colors.redAccent,
+        title: const Text("Attendance Details",style: TextStyle(color: Colors.white,fontSize: 18),),
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -147,9 +201,17 @@ class _UserAttendanceDetailScreenState
                         Text("Remark: ${punch.punchInRemark}"),
 
                         if (punch.punchInImage.isNotEmpty)
-                          Image.network(
-                            "${punch.punchInImage}",
-                            height: 120,
+                          InkWell(
+                            onTap:(){
+                              _showImageDialog(
+                                context,
+                                punch.punchInImage,
+                              );
+                            },
+                            child: Image.network(
+                              "${punch.punchInImage}",
+                              height: 70,
+                            ),
                           ),
 
                         const Divider(),
@@ -158,10 +220,20 @@ class _UserAttendanceDetailScreenState
                         Text("Remark: ${punch.punchOutRemark}"),
 
                         if (punch.punchOutImage.isNotEmpty)
-                          Image.network(
-                            "${punch.punchOutImage}",
-                            height: 120,
+                          InkWell(
+                            onTap:(){
+                              _showImageDialog(
+                                context,
+                                punch.punchOutImage,
+                              );
+                          },
+                            child: Image.network(
+                              "${punch.punchOutImage}",
+                              height: 70,
+                            ),
                           ),
+                        const Divider(),
+                        Text("Total Break Minutes: ${punch.total_break_minutes}"),
                       ],
                     ),
                   ),

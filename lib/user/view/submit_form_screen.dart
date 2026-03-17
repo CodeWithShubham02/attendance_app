@@ -58,8 +58,12 @@ class _SubmitFormScreenState extends State<SubmitFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(
+          color: Colors.white, // 🔥 icon color
+        ),
         backgroundColor: Colors.blue,
-        title: const Text("Submit Form Reports"),
+        title: const Text("Submitted Form",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),),
+
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_month),
@@ -86,6 +90,8 @@ class _SubmitFormScreenState extends State<SubmitFormScreen> {
               DataColumn(label: Text("Relation")),
               DataColumn(label: Text("Variant")),
               DataColumn(label: Text("Status")),
+              DataColumn(label: Text("Bank Remark")),
+              DataColumn(label: Text("Update Status")),
               DataColumn(label: Text("Time")),
             ],
             rows: reports.map((r) {
@@ -147,6 +153,8 @@ class _SubmitFormScreenState extends State<SubmitFormScreen> {
                     ),
                   ),
 
+                  DataCell(Text(r.bankRemarks)),
+                  DataCell(Text(r.updateStatus)),
                   DataCell(Text(r.reportTime)),
                 ],
               );

@@ -94,20 +94,76 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: const Text("Assign Holiday", style: TextStyle(fontSize: 18)),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("Roster", style: TextStyle(fontSize: 18,color: Colors.white)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
+            Image.asset("assets/image/img_1.png"),
+            Text(
+              "⚠ If the cid, uid, or office_name does not match, the roster upload will be rejected.",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+            Card(
+              margin: EdgeInsets.all(12),
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "📌 Roster Upload Rules",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Text("• cid – Client ID (Numeric)"),
+                    Text("• uid – User ID (Numeric)"),
+                    Text("• name – Employee Name"),
+                    Text("• User Type – User Type Name"),
+                    Text("• office_name – Office Name"),
+                    Text("• status – HOLIDAY"),
+                    Text("• roster_date – DD-MM-YYYY"),
+                    Text("• shift_start – HH:MM (24 Hour)"),
+                    Text("• shift_end – HH:MM (24 Hour)"),
+                    SizedBox(height: 6),
+                    Text(
+                      "⚠ Date & Time format strictly follow karein.",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            )
+,
+            const SizedBox(height: 20),
             const Text(
-              "Select Excel File",
+              "This formate excel file upload.",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: uploadExcel,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               icon: const Icon(Icons.upload_file),
               label: const Text("Select File"),
             ),

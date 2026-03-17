@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import '../controller/branch_controller.dart';
 import '../model/branch_model.dart';
 import 'branch_screen.dart';
@@ -30,25 +32,30 @@ class _BranchListScreenState extends State<BranchListScreen> {
   void delete(String id) async {
     final ok = await controller.deleteBranch(id);
     if (ok) refresh();
+    Get.snackbar(
+      "Delete",
+      "Kiosk deleted successfully",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red.shade600,
+      colorText: Colors.white,
+      icon: const Icon(Icons.delete, color: Colors.white),
+      margin: const EdgeInsets.all(12),
+      borderRadius: 12,
+      duration: const Duration(seconds: 3),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(backgroundColor:Colors.blue,
-          title: const Text("All Kiosk",style: TextStyle(color: Colors.white),)),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddBranchScreen(cid: widget.cid),
-            ),
-          );
-          if (result == true) refresh();
-        },
-      ),
+          iconTheme: IconThemeData(
+            color: Colors.white
+          ),
+          title: const Text("All Kiosk",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),)),
+
       body: FutureBuilder<List<BranchModel>>(
         future: future,
         builder: (context, snap) {

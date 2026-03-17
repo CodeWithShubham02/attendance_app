@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:joizone/admin/model/user_model.dart';
@@ -22,7 +23,40 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController userId = TextEditingController();
   final TextEditingController userPassword = TextEditingController();
   bool isLoading = false;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+      checkLogin();
+  }
+  Future<void> checkLogin() async {
+    final prefs = await SharedPreferences.getInstance();
 
+    String? uid = prefs.getString('uid');
+    print("--------------check in-----------------");
+    print(uid);
+    String? userData = prefs.getString('user_model');
+
+    if (uid != null && uid.isNotEmpty && userData != null && userData.isNotEmpty) {
+      try {
+
+        Map<String, dynamic> json = jsonDecode(userData);
+        UserModel userModel = UserModel.fromJson(json);
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmployeeHomeScreen(userModel: userModel),
+          ),
+        );
+
+      } catch (e) {
+        print("User model decode error: $e");
+      }
+    }
+  }
   void login() async {
     if (userId.text.isEmpty || userPassword.text.isEmpty) {
       ScaffoldMessenger.of(context)
@@ -41,9 +75,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['status'] == true) {
       // Login successful
+
       final data = result['data'];
       // Save UID in SharedPreferences
-
+      print("------data--------------------");
+      print(data);
+      print("--------------------------");
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Welcome ${data['userid']}")),
@@ -78,9 +115,15 @@ class _LoginScreenState extends State<LoginScreen> {
           createdAt: data['createdAt'],
           updatedAt: data['updatedAt'],);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('uid', data['uid']);
+      await prefs.setString('uid', data['uid'].toString());
+      await prefs.setString('branchLat',userModel.branchLat);
+      await prefs.setString('branchLong',userModel.branchLong);
       await prefs.setString('role', 'user');
       final userJson = jsonEncode(userModel.toJson());
+      print("------------------------------");
+      print(userJson);
+      print(userModel);
+      print("------------------------------");
       await prefs.setString('user_model', userJson);
       // Navigate to your home screen
        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmployeeHomeScreen(userModel: userModel,)));
@@ -123,18 +166,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  bool _obscureText = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
           backgroundColor: Colors.blue,
-          title: Text("Login",style: TextStyle(color: Colors.white),)),
+          centerTitle: true,
+          title: Text("Login",style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
+            SizedBox(height: 20,),
             /// ROLE DROPDOWN
             DropdownButtonFormField<String>(
               value: selectedRole,
@@ -159,6 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: userIdCtrl,
                 decoration: InputDecoration(
                   labelText: "Admin User ID",
+                  hint: Text("Enter the admin id"),
+                  prefixIcon: const Icon(Icons.person),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -166,9 +213,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
               TextField(
                 controller: passwordCtrl,
-                obscureText: true,
+                obscureText: _obscureText,
                 decoration: InputDecoration(
                   labelText: "Password",
+                  prefixIcon: const Icon(Icons.lock),
+                  hint: Text("Enter the password"),
+                  // 🔹 Show / Hide Icon
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  ),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -178,6 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: userId,
                 decoration: InputDecoration(
                   labelText: "User ID",
+                  hint: Text("Enter the user id"),
+                  prefixIcon: const Icon(Icons.person),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -185,9 +247,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
               TextField(
                 controller: userPassword,
-                obscureText: true,
+                obscureText: _obscureText,
                 decoration: InputDecoration(
                   labelText: "Password",
+                  // 🔹 Prefix Icon
+                  hint: Text("Enter the password"),
+                  prefixIcon: const Icon(Icons.lock),
+
+                  // 🔹 Show / Hide Icon
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  ),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -197,11 +274,43 @@ class _LoginScreenState extends State<LoginScreen> {
             /// LOGIN BUTTON
             selectedRole=='admin'?ElevatedButton(
               onPressed: isLoading ? null : loginAdmin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+    ),
               child: isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : Text("Login"),
             ):ElevatedButton(
               onPressed: isLoading ? null : login,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               child: isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : Text("Login"),

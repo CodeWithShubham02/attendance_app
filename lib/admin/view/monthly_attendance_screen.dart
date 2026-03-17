@@ -14,6 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/gestures.dart';
+import 'package:universal_html/html.dart' as html;
 
 class MonthlyAttendanceScreen extends StatefulWidget {
   final String cid;
@@ -45,22 +46,25 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
   bool isLoading = false;
 
   // ---------------- PICK DATE ----------------
-  Future<void> pickDate({required bool isFrom}) async {
-    final picked = await showDatePicker(
+  DateTimeRange? selectedRange;
+
+  Future<void> pickDateRange() async {
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: isFrom ? fromDate : toDate,
       firstDate: DateTime(2023),
       lastDate: DateTime.now(),
+      saveText: "Submit",
+      initialDateRange: selectedRange,
     );
 
     if (picked != null) {
       setState(() {
-        if (isFrom) {
-          fromDate = picked;
-        } else {
-          toDate = picked;
-        }
+        selectedRange = picked;
+        fromDate = picked.start;
+        toDate = picked.end;
       });
+
+      fetchAttendance(); // yahi par call karo
     }
   }
 
@@ -125,6 +129,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
       setState(() => isLoading = false);
     }
   }
+
   Future<void> downloadExcel() async {
     if (filteredRecords.isEmpty) {
       Get.snackbar("No Data", "No attendance data to export");
@@ -136,56 +141,215 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
 
     // 🟢 HEADER ROW
     sheet.appendRow([
-      TextCellValue("ID"),
-      TextCellValue("UID"),
-      TextCellValue("Name"),
-      TextCellValue("Department"),
-      TextCellValue("Office"),
-      TextCellValue("Status"),
-      TextCellValue("Punch In"),
-      TextCellValue("Punch Out"),
-      TextCellValue("Shift Start"),
-      TextCellValue("Shift End"),
-      TextCellValue("Late"),
-      TextCellValue("Total Break (min)"),
-      TextCellValue("Working Minutes"),
       TextCellValue("Date"),
+      TextCellValue("UID"),
+      TextCellValue("User Name"),
+      TextCellValue("User Type"),
+      TextCellValue("Office Name"),
+      TextCellValue("Status"),
+      TextCellValue("Punch In Date"),
+      TextCellValue("Punch In Time"),
+      TextCellValue("Punch In Image"),
+      TextCellValue("Punch Out Date"),
+      TextCellValue("Punch Out Time"),
+      TextCellValue("Punch Out Image"),
+      TextCellValue("Shift Time"),
+      TextCellValue("Punch In Address"),
+      TextCellValue("Punch Out Address"),
+      TextCellValue("Punch In Remark"),
+      TextCellValue("Punch Out Remark"),
+      TextCellValue("Late Marks"),
+      TextCellValue("Working Hours"),
+
     ]);
 
-    // 🔵 DATA ROWS (🔥 FIXED)
+    // 🔵 DATA ROWS
     for (var row in filteredRecords) {
+
+      if (row['punch_in_lat'] != null &&
+          row['punch_in_lng'] != null) {
+
+        final lat = double.tryParse(row['punch_in_lat'].toString());
+        final lng = double.tryParse(row['punch_in_lng'].toString());
+
+        if (lat != null && lng != null) {
+          final address = await getAddressFromLatLng(lat, lng);
+          row['punch_in_address'] = address;
+        } else {
+          row['punch_in_address'] = '';
+        }
+
+      } else {
+        row['punch_in_address'] = '';
+      }
+
+      if (row['punch_out_lat'] != null &&
+          row['punch_out_lng'] != null) {
+
+        final lat = double.tryParse(row['punch_out_lat'].toString());
+        final lng = double.tryParse(row['punch_out_lng'].toString());
+
+        if (lat != null && lng != null) {
+          final address = await getAddressFromLatLng(lat, lng);
+          row['punch_out_address'] = address;
+        } else {
+          row['punch_out_address'] = '';
+        }
+
+      } else {
+        row['punch_out_address'] = '';
+      }
+
       sheet.appendRow([
-        TextCellValue(row['id']?.toString() ?? ''),
+        TextCellValue(
+          (() {
+            final value = row['created_at'];
+            if (value == null || value == '-' || value.toString().isEmpty) {
+              return '';
+            }
+
+            final parsed = DateTime.tryParse(value.toString());
+            if (parsed == null) return '';
+
+            return DateFormat('dd-MM-yyyy').format(parsed); // ✅ Only Date
+          })(),
+        ),
         TextCellValue(row['uid']?.toString() ?? ''),
         TextCellValue(row['name']?.toString() ?? ''),
         TextCellValue(row['department']?.toString() ?? ''),
         TextCellValue(row['office_name']?.toString() ?? ''),
         TextCellValue(row['status']?.toString() ?? ''),
-        TextCellValue(row['punch_in_time']?.toString() ?? ''),
-        TextCellValue(row['punch_out_time']?.toString() ?? ''),
-        TextCellValue(row['shift_start']?.toString() ?? ''),
-        TextCellValue(row['shift_end']?.toString() ?? ''),
-        TextCellValue(row['late']?.toString() ?? ''),
-        TextCellValue(row['total_break_minutes']?.toString() ?? ''),
-        TextCellValue(row['working_minutes']?.toString() ?? ''),
-        TextCellValue(row['created_at']?.toString() ?? ''),
-      ]);
+        TextCellValue(
+          (() {
+            final value = row['punch_in_time'];
+            if (value == null || value == '-' || value.toString().isEmpty) {
+              return '';
+            }
 
+            final parsed = DateTime.tryParse(value.toString());
+            if (parsed == null) return '';
+
+            return DateFormat('dd-MM-yyyy').format(parsed); // ✅ Only Date
+          })(),
+        ),
+        TextCellValue(
+          (() {
+            final value = row['punch_in_time'];
+            if (value == null || value == '-' || value.toString().isEmpty) {
+              return '';
+            }
+
+            final parsed = DateTime.tryParse(value.toString());
+            if (parsed == null) return '';
+
+            return DateFormat('hh:mm:ss a').format(parsed); // ✅ Only Time
+          })(),
+        ),
+        TextCellValue(row['punch_in_image']?.toString() ?? ''),
+        TextCellValue(
+          (() {
+            final value = row['punch_out_time'];
+            if (value == null || value == '-' || value.toString().isEmpty) {
+              return '';
+            }
+
+            final parsed = DateTime.tryParse(value.toString());
+            if (parsed == null) return '';
+
+            return DateFormat('dd-MM-yyyy').format(parsed); // ✅ Only Date
+          })(),
+        ),
+        TextCellValue(
+          (() {
+            final value = row['punch_out_time'];
+            if (value == null || value == '-' || value.toString().isEmpty) {
+              return '';
+            }
+
+            final parsed = DateTime.tryParse(value.toString());
+            if (parsed == null) return '';
+
+            return DateFormat('hh:mm:ss a').format(parsed); // ✅ Only Time
+          })(),
+        ),
+        TextCellValue(row['punch_out_image']?.toString() ?? ''),
+        TextCellValue(
+          (() {
+            final start = row['shift_start'];
+            final end = row['shift_end'];
+
+            if (start == null || end == null) return '';
+
+            final parsedStart = DateTime.tryParse("2000-01-01 $start");
+            final parsedEnd = DateTime.tryParse("2000-01-01 $end");
+
+            if (parsedStart == null || parsedEnd == null) return '';
+
+            final formattedStart = DateFormat('hh:mm a').format(parsedStart);
+            final formattedEnd = DateFormat('hh:mm a').format(parsedEnd);
+
+            return "$formattedStart - $formattedEnd";
+          })(),
+        ),
+        TextCellValue(row['punch_in_address'] ?? ''),
+        TextCellValue(row['punch_out_address'] ?? ''),
+        //TextCellValue(row['punch_out_lat']?.toString() ?? ''),
+        TextCellValue(row['punch_in_remark']?.toString() ?? ''),
+        TextCellValue(row['punch_out_remark']?.toString() ?? ''),
+        TextCellValue(row['late']?.toString() ?? ''),
+        TextCellValue(
+          (() {
+            final value = row['working_minutes'];
+
+            if (value == null || value.toString().isEmpty) {
+              return '';
+            }
+
+            final totalMinutes = int.tryParse(value.toString());
+            if (totalMinutes == null) return '';
+
+            final hours = totalMinutes ~/ 60;
+            final minutes = totalMinutes % 60;
+
+            return "${hours}h ${minutes}m";
+          })(),
+        ),
+
+      ]);
     }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath =
-        "${directory.path}/attendance_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
-
     final fileBytes = excel.encode();
-    final file = File(filePath)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(fileBytes!);
+    if (fileBytes == null) return;
 
-    await Share.shareXFiles(
-      [XFile(filePath)],
-      text: "Attendance Report",
-    );
+    final fileName =
+        "attendance_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
+
+    if (kIsWeb) {
+      // 🌐 WEB DOWNLOAD
+      final content = base64Encode(fileBytes);
+      final anchor = html.AnchorElement(
+        href:
+        "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,$content",
+      )
+        ..setAttribute("download", fileName)
+        ..click();
+
+      Get.snackbar("Success", "Downloading Excel file...");
+    } else {
+      // 📱 ANDROID / IOS DOWNLOAD
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = "${directory.path}/$fileName";
+
+      final file = File(filePath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: "Attendance Report",
+      );
+    }
   }
 
 
@@ -295,41 +459,110 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
       },
     );
   }
+  Set<String> selectedName = {};
+  Set<String> selectedStatus = {};
+  Set<String> selectedDepartment = {};
+  Set<String> selectedOffice = {};
+  void applyFilters() {
+    setState(() {
+      filteredRecords = attendanceRecords.where((row) {
+        final nameMatch = selectedName.isEmpty ||
+            selectedName.contains(row['name']);
+        final statusMatch = selectedStatus.isEmpty ||
+            selectedStatus.contains(row['status']);
 
+        final deptMatch = selectedDepartment.isEmpty ||
+            selectedDepartment.contains(row['department']);
+
+        final officeMatch = selectedOffice.isEmpty ||
+            selectedOffice.contains(row['office_name']);
+
+        return nameMatch && statusMatch && deptMatch && officeMatch;
+      }).toList();
+    });
+  }
+  List<String> getUniqueValues(String key) {
+    return attendanceRecords
+        .map((e) => e[key]?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
+  void showFilterDialog({
+    required String title,
+    required List<String> options,
+    required Set<String> selectedValues,
+  }) {
+    Get.defaultDialog(
+      title: "Filter $title",
+      content: SizedBox(
+        width: 300,
+        height: 400,
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                children: options.map((value) {
+                  return CheckboxListTile(
+                    value: selectedValues.contains(value),
+                    title: Text(value),
+                    onChanged: (checked) {
+                      if (checked == true) {
+                        selectedValues.add(value);
+                      } else {
+                        selectedValues.remove(value);
+                      }
+                      applyFilters();
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                selectedValues.clear();
+                applyFilters();
+                Navigator.pop(context);
+              },
+              child: const Text("Reset Filter"),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+  DateTime? safeParse(String? value) {
+    if (value == null || value.isEmpty || value == '-') return null;
+    return DateTime.tryParse(value);
+  }
+  DateTime? safeTimeParse(String? value) {
+    if (value == null || value.isEmpty || value == '-') return null;
+    try {
+      return DateFormat('HH:mm:ss').parse(value);
+    } catch (e) {
+      return null;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Employee Attendance"),
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("Employee Attendance",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
           IconButton(
-              icon: const Icon(Icons.calendar_month),
-              onPressed: () async {
-                await pickDate(isFrom: true);
-                await pickDate(isFrom: false);
-                fetchAttendance();
-              }),
+            icon: const Icon(Icons.calendar_month),
+            onPressed: pickDateRange,
+          ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: downloadExcel,
           ),
 
           // 🔍 Search
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Get.defaultDialog(
-                title: "Search Employee",
-                content: TextField(
-                  controller: searchController,
-                  decoration: const InputDecoration(
-                    hintText: "Enter employee name",
-                  ),
-                  onChanged: filterByName,
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: isLoading
@@ -372,27 +605,93 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                     border: TableBorder.all(
                         color: Colors.grey.shade400, width: 1),
                     columnSpacing: 24,
-                    columns: const [
-                      DataColumn(label: Text("Attendance ID")),
-                      DataColumn(label: Text("UID")),
-                      DataColumn(label: Text("Name")),
-                      DataColumn(label: Text("Department")),
-                      DataColumn(label: Text("Office Name")),
-                      DataColumn(label: Text("Status")),
-                      DataColumn(label: Text("Punch In")),
-                      DataColumn(label: Text("Punch In Address")),
-                      DataColumn(label: Text("Punch Out")),
-                      DataColumn(label: Text("Punch Out Address")),
-                      DataColumn(label: Text("Shift Start")),
-                      DataColumn(label: Text("Shift End")),
-                      DataColumn(label: Text("Punch In Image")),
-                      DataColumn(label: Text("Punch Out Image")),
-                      DataColumn(label: Text("Punch In Remark")),
-                      DataColumn(label: Text("Punch Out Remark")),
-                      DataColumn(label: Text("Total Break")),
-                      DataColumn(label: Text("Late Mark")),
-                      DataColumn(label: Text("Total Working Minutes")),
-                      DataColumn(label: Text("Date")),
+                    columns: [
+                      //DataColumn(label: Text("Attendance ID")),
+                      const DataColumn(label: Text("Date")),
+                      const DataColumn(label: Text("UID")),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            const Text("Name"),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, size: 18),
+                              onPressed: () {
+                                showFilterDialog(
+                                  title: "Name",
+                                  options: getUniqueValues('name'),
+                                  selectedValues: selectedName,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            const Text("User Type"),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, size: 18),
+                              onPressed: () {
+                                showFilterDialog(
+                                  title: "User Type",
+                                  options: getUniqueValues('department'),
+                                  selectedValues: selectedDepartment,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            const Text("Office Name"),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, size: 18),
+                              onPressed: () {
+                                showFilterDialog(
+                                  title: "Office",
+                                  options: getUniqueValues('office_name'),
+                                  selectedValues: selectedOffice,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            const Text("Status"),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list, size: 18),
+                              onPressed: () {
+                                showFilterDialog(
+                                  title: "Status",
+                                  options: getUniqueValues('status'),
+                                  selectedValues: selectedStatus,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const DataColumn(label: Text("Punch In Date")),
+                      const DataColumn(label: Text("Punch In Time")),
+                      const DataColumn(label: Text("Punch In Address")),
+                      const DataColumn(label: Text("Punch Out Date")),
+                      const DataColumn(label: Text("Punch Out Time")),
+                      const DataColumn(label: Text("Punch Out Address")),
+                      const DataColumn(label: Text("Shift Time")),
+                      const DataColumn(label: Text("Punch In Image")),
+                      const DataColumn(label: Text("Punch Out Image")),
+                      const DataColumn(label: Text("Punch In Remark")),
+                      const DataColumn(label: Text("Punch Out Remark")),
+                      //DataColumn(label: Text("Total Break")),
+                      const DataColumn(label: Text("Late Marks")),
+                      const DataColumn(label: Text("Total Working Minutes")),
+
                     ],
                     rows: filteredRecords.map((data) {
                       DateTime? parse(dynamic v) {
@@ -405,18 +704,73 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                       }
 
                       return DataRow(cells: [
-                        DataCell(Text(data['id'] ?? '-')),
+                        //DataCell(Text(data['id'] ?? '-')),
+                        DataCell(
+                          Text(
+                            safeParse(data['created_at']) != null
+                                ? DateFormat('dd-MM-yyyy')
+                                .format(safeParse(data['created_at'])!)
+                                : '-',
+                          ),
+                        ),
                         DataCell(Text(data['uid'] ?? '-')),
                         DataCell(Text(data['name'] ?? '-')),
                         DataCell(Text(data['department'] ?? '-')),
                         DataCell(Text(data['office_name'] ?? '-')),
                         DataCell(Text(data['status'] ?? '-')),
-                        DataCell(Text(data['punch_in_time'] ?? '-')),
+                        DataCell(
+                          Text(
+                            safeParse(data['punch_in_time']) != null
+                                ? DateFormat('dd-MM-yyyy')
+                                .format(safeParse(data['punch_in_time'])!)
+                                : '-',
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            safeParse(data['punch_in_time']) != null
+                                ? DateFormat('hh:mm:ss a')
+                                .format(safeParse(data['punch_in_time'])!)
+                                : '-',
+                          ),
+                        ),
                         DataCell( Builder( builder: (context) { final lat = double.tryParse(data['punch_in_lat']?.toString() ?? ''); final lng = double.tryParse(data['punch_in_lng']?.toString() ?? ''); if (lat == null || lng == null) { return const Text("-"); } return FutureBuilder<String>( future: getAddressFromLatLng(lat, lng), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) { return const Text("Loading..."); } return Text( snapshot.data ?? "Address not found", maxLines: 2, overflow: TextOverflow.ellipsis, ); }, ); }, ), ),
-                        DataCell(Text(data['punch_out_time'] ?? '-')),
+                        DataCell(
+                          Text(
+                            safeParse(data['punch_out_time']) != null
+                                ? DateFormat('dd-MM-yyyy')
+                                .format(safeParse(data['punch_out_time'])!)
+                                : '-',
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            safeParse(data['punch_out_time']) != null
+                                ? DateFormat('hh:mm:ss a')
+                                .format(safeParse(data['punch_out_time'])!)
+                                : '-',
+                          ),
+                        ),
                         DataCell( Builder( builder: (context) { final lat = double.tryParse(data['punch_out_lat']?.toString() ?? ''); final lng = double.tryParse(data['punch_out_lng']?.toString() ?? ''); if (lat == null || lng == null) { return const Text("-"); } return FutureBuilder<String>( future: getAddressFromLatLng(lat, lng), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) { return const Text("Loading..."); } return Text( snapshot.data ?? "Address not found", maxLines: 2, overflow: TextOverflow.ellipsis, ); }, ); }, ), ),
-                        DataCell(Text(data['shift_start'] ?? '-')),
-                        DataCell(Text(data['shift_end'] ?? '-')),
+                        DataCell(
+                          Row(
+                            children: [
+                              Text(
+                                safeTimeParse(data['shift_start']) != null
+                                    ? DateFormat('hh:mm a')
+                                    .format(safeTimeParse(data['shift_start'])!)
+                                    : '-',
+                              ),
+                              const Text(" - "),
+                              Text(
+                                safeTimeParse(data['shift_end']) != null
+                                    ? DateFormat('hh:mm a')
+                                    .format(safeTimeParse(data['shift_end'])!)
+                                    : '-',
+                              ),
+                            ],
+                          ),
+                        ),
                         DataCell(
                           data['punch_in_image'] != null &&
                               data['punch_in_image'].toString().isNotEmpty
@@ -461,10 +815,21 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                         ),
                         DataCell(Text(data['punch_in_remark'] ?? '-')),
                         DataCell(Text(data['punch_out_remark'] ?? '-')),
-                        DataCell(Text(data['total_break_minutes'] ?? '-')),
+                        //DataCell(Text(data['total_break_minutes'] ?? '-')),
                         DataCell(Text(data['late'] ?? '-')),
-                        DataCell(Text(data['total_working_minutes'] ?? '-')),
-                        DataCell(Text(data['created_at'] ?? '-')),
+                        DataCell(
+                          Text(
+                            data['total_working_minutes'] != null
+                                ? (() {
+                              int totalMinutes = int.parse(data['total_working_minutes'].toString());
+                              int hours = totalMinutes ~/ 60;
+                              int minutes = totalMinutes % 60;
+                              return "${hours}h ${minutes}m";
+                            })()
+                                : '-',
+                          ),
+                        ),
+
                       ]);
                     }).toList(),
                   ),

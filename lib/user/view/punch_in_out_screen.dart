@@ -279,7 +279,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       setState(() => isLoadingPhoto = true);
 
       final XFile? picked =
-      await _picker.pickImage(source: source, imageQuality: 80);
+      await _picker.pickImage(source: source, imageQuality: 80,preferredCameraDevice: CameraDevice.front,);
 
       if (picked == null) return null;
 
@@ -428,7 +428,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
   //   };
   // }
 
-  Map<String, dynamic> getPunchStatus({
+  Map<String, dynamic>  getPunchStatus({
     required DateTime shiftStart,
     required DateTime shiftEnd,
   }) {
@@ -447,8 +447,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       }
     }
 
-    final allowedStart = start.subtract(const Duration(minutes: 120));
-    final presentLimit = start.add(const Duration(minutes: 5));
+    final allowedStart = start.subtract(const Duration(minutes: 300));
+    final presentLimit = start.add(const Duration(minutes: 10));
 
     // ❌ Too early
     if (now.isBefore(allowedStart)) {
@@ -462,6 +462,11 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     // ✅ Late logic
     final isLate = now.isAfter(presentLimit) ? 1 : 0;
+
+    // for example user shift time 10:00 am
+    //user punch in 10:11 late marks
+    //user punch after 1 hour 11:00 1 hr late
+    //user punch 12:00 half day
 
     return {
       'status': 'Present',
@@ -507,6 +512,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
       await stopLocationTracking();
       await prefs.remove('attendance_id');
+      await prefs.remove('uid');
+      await prefs.remove('cid');
 
       debugPrint("✅ Auto punch out done due to GPS OFF");
     } catch (e) {
@@ -521,7 +528,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     isTrackingActive = true;
 
     locationTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 60),
           (_) async {
             if (!isTrackingActive || attendanceId == null) return;
         try {
@@ -632,6 +639,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     attendanceId = data['attendance_id'].toString();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('attendance_id', attendanceId!);
+    await prefs.setString('uid', widget.userModel.uid);
+    await prefs.setString('cid', widget.userModel.cid);
 
 
     print("Attendance ID saved: $attendanceId");
@@ -644,7 +653,12 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     startLocationTracking();
     // ▶️ START BACKGROUND SERVICE
     final service = FlutterBackgroundService();
-    await service.startService();
+    //await service.startService();
+    bool isRunning = await service.isRunning();
+
+    if (!isRunning) {
+      service.startService();
+    }
   }
 
 
@@ -675,6 +689,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('attendance_id');
+    await prefs.remove('uid');
+    await prefs.remove('cid');
 
     attendanceId = null;
 
@@ -746,6 +762,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       await stopLocationTracking();
       // ❌ REMOVE attendance_id
       await prefs.remove('attendance_id');
+      await prefs.remove('uid');
+      await prefs.remove('cid');
 
       // 🛑 STOP SERVICE
       FlutterBackgroundService().invoke('stopService');
@@ -771,11 +789,24 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     }
   }
 
-
+  String convertTo12Hour(String time) {
+    try {
+      final parsedTime = DateFormat("HH:mm").parse(time);
+      return DateFormat("hh:mm a").format(parsedTime);
+    } catch (e) {
+      return time;
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Punch In / Out")),
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+          title: const Text("Punch In / Out",style: TextStyle(color: Colors.white,fontSize: 16,fontFamily: 'impact'),),
+        iconTheme: const IconThemeData(
+          color: Colors.white, // 🔥 icon color
+        ),),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -807,6 +838,15 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
                     ? Colors.green
                     : Colors.red,
               ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Shift Time: "),
+                Text(convertTo12Hour(widget.userModel.shiftStart)),
+                Text(" - "),
+                Text(convertTo12Hour(widget.userModel.shiftEnd)),
+              ],
             ),
             // Card(
             //   margin: const EdgeInsets.all(12),
@@ -860,32 +900,64 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
               ),
             ),
 
-            ElevatedButton.icon(
-              onPressed: () async{
-                final imageUrl = await pickImagePhoto1(ImageSource.camera);
+            photoUrl != null
+                ? const SizedBox.shrink()
+                : isLoading
+                ? const Center(
+              child: CircularProgressIndicator(),
+            )
+                : ElevatedButton.icon(
+              onPressed: () async {
+                setState(() {
+                  isLoading = true; // 🔥 Start loading
+                });
+
+                final imageUrl =
+                await pickImagePhoto1(ImageSource.camera);
+
                 print("Uploaded Image URL: $imageUrl");
+
+                setState(() {
+                  isLoading = false; // ✅ Stop loading
+                });
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                elevation: 3,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               icon: const Icon(Icons.camera_alt),
               label: const Text("Capture Image"),
             ),
-
-            if (photo != null)
+            if (photo != null || photoUrl != null)
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: Image.file(
                   File(photo!.path),
-                  height: 150,
+                  height: 100,
+                  width: 100,
                 ),
               ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
             isLoading
                 ? const CircularProgressIndicator()
                 : Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
+                photoUrl==null?SizedBox.shrink():ElevatedButton(
                   onPressed: () async {
                     try {
                       setState(() => isLoading = true);
@@ -900,12 +972,28 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
                       setState(() => isLoading = false);
                     }
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue, // 🔥 Punch out color
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   child: const Text("Punch In"),
                 ),
 
                 const SizedBox(height: 5),
 
-                ElevatedButton(
+                photoUrl==null?SizedBox.shrink():ElevatedButton(
                   onPressed: () async {
                     try {
                       setState(() => isLoading = true);
@@ -920,46 +1008,31 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
                       setState(() => isLoading = false);
                     }
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue, // 🔥 Punch out color
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   child: const Text("Punch Out"),
                 ),
 
               ],
             ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 }
-// ElevatedButton(
-// onPressed: () async {
-// await http.post(
-// Uri.parse("https://fms.bizipac.com/apinew/attendance/attendance_break_start.php"),
-// body: {
-// "attendance_id": attendanceId.toString(),
-// },
-// );
-//
-// ScaffoldMessenger.of(context)
-//     .showSnackBar(SnackBar(content: Text("Your break time start - ${DateTime.timestamp()}")));
-//
-// },
-// child: const Text("Start Break"),
-// ),
-// const SizedBox(height: 5),
-// ElevatedButton(
-// onPressed: () async {
-// await http.post(
-// Uri.parse("https://fms.bizipac.com/apinew/attendance/attendance_break_end.php"),
-// body: {
-// "attendance_id": attendanceId.toString(),
-// },
-// );
-// ScaffoldMessenger.of(context)
-//     .showSnackBar(SnackBar(content: Text("Your break time end - ${DateTime.timestamp()}")));
-//
-//
-// },
-// child: const Text("End Break"),
-// ),
-// const SizedBox(height: 5),

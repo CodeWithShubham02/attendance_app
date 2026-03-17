@@ -1,27 +1,31 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 import '../model/attendance_location_model.dart';
 
 class AttendanceRouteMapScreen extends StatefulWidget {
   final List<AttendanceLocationModel> data;
 
-  const AttendanceRouteMapScreen({super.key, required this.data});
+  const AttendanceRouteMapScreen({
+    super.key,
+    required this.data,
+  });
 
   @override
   State<AttendanceRouteMapScreen> createState() =>
       _AttendanceRouteMapScreenState();
 }
 
-class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
+class _AttendanceRouteMapScreenState
+    extends State<AttendanceRouteMapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   final List<LatLng> _routePoints = [];
 
-  late LatLng _initialPosition;//= const LatLng(19.0760, 72.8777); // fallback
+  LatLng? _initialPosition; // ✅ nullable (NO late)
 
   @override
   void initState() {
@@ -30,14 +34,35 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
   }
 
   void _prepareMapData() {
-    if (widget.data.isEmpty) return;
+    if (widget.data.isEmpty) {
+      _initialPosition = const LatLng(20.5937, 78.9629); // India fallback
+      return;
+    }
 
     _loadOfficeMarker();
     _loadRoute();
 
+    // Agar office se set nahi hua
+    if (_initialPosition == null && _routePoints.isNotEmpty) {
+      _initialPosition = _routePoints.first;
+    }
+
+    // Final fallback
+    _initialPosition ??= const LatLng(20.5937, 78.9629);
+
     setState(() {});
   }
+  Future<void> openGoogleMap(double lat, double lng) async {
+    final url = "https://www.google.com/maps?q=$lat,$lng";
+    final uri = Uri.parse(url);
 
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.platformDefault, // 👈 IMPORTANT
+    )) {
+      throw 'Could not launch Google Maps';
+    }
+  }
   void _loadOfficeMarker() {
     final officeLat = _toDouble(widget.data.first.blatitude);
     final officeLng = _toDouble(widget.data.first.blongitude);
@@ -116,10 +141,10 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
     double maxLng = _routePoints.first.longitude;
 
     for (var p in _routePoints) {
-      minLat = p.latitude < minLat ? p.latitude : minLat;
-      maxLat = p.latitude > maxLat ? p.latitude : maxLat;
-      minLng = p.longitude < minLng ? p.longitude : minLng;
-      maxLng = p.longitude > maxLng ? p.longitude : maxLng;
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
     }
 
     controller.animateCamera(
@@ -140,9 +165,10 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("User Route Tracking"),
+        title: const Text("Real Time Location Tracking"),
         backgroundColor: Colors.blue,
       ),
       body: Column(
@@ -151,8 +177,8 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
             height: 400,
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
-                target: _initialPosition,
-                zoom: 18,
+                target: _initialPosition!,
+                zoom: 16,
               ),
               mapType: MapType.normal,
               markers: _markers,
@@ -160,7 +186,7 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
               zoomControlsEnabled: true,
               onMapCreated: (controller) {
                 _controller.complete(controller);
-                _fitCameraToRoute(); // 🔥 IMPORTANT
+                _fitCameraToRoute();
               },
             ),
           ),
@@ -175,11 +201,22 @@ class _AttendanceRouteMapScreenState extends State<AttendanceRouteMapScreen> {
                   margin: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 4),
                   child: ListTile(
-                    leading: const Icon(Icons.location_on,
-                        color: Colors.green),
+                    leading: InkWell(
+                      onTap: (){
+                        double lat = double.parse(item.latitude);
+                        double lng = double.parse(item.longitude);
+
+                        openGoogleMap(lat, lng);
+                      },
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.green,
+                      ),
+                    ),
                     title: Text(item.name ?? 'User'),
                     subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
                       children: [
                         Text("Lat: ${item.latitude}"),
                         Text("Lng: ${item.longitude}"),

@@ -1,12 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:excel/excel.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:universal_html/html.dart' as html;
 
 import '../controller/attendance_summary_controller.dart';
 import '../model/attendance_summary_model.dart';
@@ -28,6 +31,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
       context: context,
       firstDate: DateTime(2024),
       lastDate: DateTime.now(),
+      saveText: "Submit",
     );
 
     if (picked != null) {
@@ -40,8 +44,12 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
         fromDate: from,
         toDate: to,
       );
+      allRecords = records;
 
+      officeList = allRecords.map((e) => e.officeName).toSet().toList();
+      userTypeList = allRecords.map((e) => e.department).toSet().toList();
       setState(() => isLoading = false);
+
     }
   }
 
@@ -50,71 +58,214 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
     return DateFormat('dd MMM yyyy')
         .format(DateTime.parse(date));
   }
-  Future<void> downloadSummaryExcel(List<AttendanceSummary> records) async {
-    if (records.isEmpty) {
-      Get.snackbar("No Data", "No summary data to export");
-      return;
-    }
 
-    final excel = Excel.createExcel();
-    final sheet = excel['Attendance Summary'];
-
-    // 🟢 HEADER ROW (same as DataTable)
-    sheet.appendRow([
-      TextCellValue("UID"),
-      TextCellValue("Name"),
-      TextCellValue("Executive"),
-      TextCellValue("Office Name"),
-      TextCellValue("Total Days"),
-      TextCellValue("Total Present"),
-      TextCellValue("Total Absent"),
-      TextCellValue("Total Holiday"),
-      TextCellValue("Missed Punch"),
-      TextCellValue("Total Minutes"),
-      TextCellValue("From Date"),
-      TextCellValue("To Date"),
-    ]);
-
-    // 🔵 DATA ROWS
-    for (final r in records) {
-      sheet.appendRow([
-        TextCellValue(r.uid.toString()),
-        TextCellValue(r.name),
-        TextCellValue(r.department), // Executive
-        TextCellValue(r.officeName),
-        TextCellValue(r.totalDays.toString()),
-        TextCellValue(r.totalPresent.toString()),
-        TextCellValue(r.totalAbsent.toString()),
-        TextCellValue(r.totalHoliday.toString()),
-        TextCellValue(r.missedPunchOut.toString()),
-        TextCellValue(r.totalHour.toString()),
-        TextCellValue(r.fromDate),
-        TextCellValue(r.toDate),
-      ]);
-    }
-
-    // 📁 SAVE FILE
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath =
-        "${directory.path}/attendance_summary_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
-
-    final fileBytes = excel.encode();
-    final file = File(filePath)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(fileBytes!);
-
-    // 📤 SHARE FILE
-    await Share.shareXFiles(
-      [XFile(filePath)],
-      text: "Attendance Summary Report",
-    );
+  Future<void> downloadSummaryExcel(
+  List<AttendanceSummary> recordsToExport,
+  ) async {
+  if (recordsToExport.isEmpty) {
+  Get.snackbar("No Data", "No summary data to export");
+  return;
   }
 
+  final excel = Excel.createExcel();
+  final sheet = excel['Attendance Summary'];
+
+  // 🟢 HEADER ROW (same as DataTable)
+  sheet.appendRow([
+    TextCellValue("UID"),
+    TextCellValue("Name"),
+    TextCellValue("Executive"),
+    TextCellValue("Office Name"),
+    TextCellValue("Total Days"),
+    TextCellValue("Total Present"),
+    TextCellValue("Total Absent"),
+    TextCellValue("Total GPS Off"),
+    TextCellValue("Total Internet Off"),
+    TextCellValue("Total Outside Kiosk"),
+    TextCellValue("Total WO"),
+    TextCellValue("Missed Punch"),
+    TextCellValue("Total Late Marks"),
+    TextCellValue("Total Break Time"),
+    TextCellValue("Total Working Time"),
+    TextCellValue("From Date"),
+    TextCellValue("To Date"),
+  ]);
+
+  // 🔵 DATA ROWS
+  for (final r in records) {
+    sheet.appendRow([
+      TextCellValue(r.uid.toString()),
+      TextCellValue(r.name),
+      TextCellValue(r.department), // Executive
+      TextCellValue(r.officeName),
+      TextCellValue(r.totalDays.toString()),
+      TextCellValue(r.totalPresent.toString()),
+      TextCellValue(r.totalAbsent.toString()),
+      TextCellValue(r.totalGps.toString()),
+      TextCellValue(r.totalInternet.toString()),
+      TextCellValue(r.totalOutside.toString()),
+      TextCellValue(r.totalHoliday.toString()),
+      TextCellValue(r.missedPunchOut.toString()),
+      TextCellValue(r.totalLate.toString()),
+      TextCellValue(r.total_break_minutes.toString()),
+      TextCellValue(r.totalTimeFormate.toString()),
+      TextCellValue(r.fromDate),
+      TextCellValue(r.toDate),
+    ]);
+  }
+
+  final fileBytes = excel.encode();
+  if (fileBytes == null) return;
+
+  final fileName =
+  "Attendance_Summary_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
+
+  if (kIsWeb) {
+  // 🌐 WEB DOWNLOAD
+  final content = base64Encode(fileBytes);
+  final anchor =
+  html.AnchorElement(
+  href:
+  "data:application/octet-stream;charset=utf-16le;base64,$content",
+  )
+  ..setAttribute("download", fileName)
+  ..click();
+  Get.snackbar("Success", "Downloading Excel file...");
+  } else {
+  // 📱 MOBILE DOWNLOAD (Android/iOS)
+
+  final directory = await getApplicationDocumentsDirectory();
+  final filePath =
+  "${directory.path}/attendance_summary_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
+
+
+  final file = File(filePath)
+  ..createSync(recursive: true)
+  ..writeAsBytesSync(fileBytes);
+
+  await Share.shareXFiles([
+  XFile(filePath),
+  ], text: "Attendance Summary Report");
+  }
+  }
+
+  final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    _verticalController.dispose();
+    super.dispose();
+  }
+  Set<String> selectedOffices = {};
+  Set<String> selectedUserTypes = {};
+
+  List<AttendanceSummary> allRecords = [];
+  List<String> officeList = [];
+  List<String> userTypeList = [];
+  void applyFilter() {
+    setState(() {
+      records = allRecords.where((element) {
+        final officeMatch = selectedOffices.isEmpty ||
+            selectedOffices.contains(element.officeName);
+
+        final userTypeMatch = selectedUserTypes.isEmpty ||
+            selectedUserTypes.contains(element.department);
+
+        return officeMatch && userTypeMatch;
+      }).toList();
+    });
+  }
+  void showMultiSelectFilter({
+    required List<String> items,
+    required Set<String> selectedValues,
+    required Function(Set<String>) onApply,
+  }) {
+    final tempSelected = Set<String>.from(selectedValues);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Select Options"),
+          content: SizedBox(
+            width: 300,
+            height: 400,
+            child: Column(
+              children: [
+                CheckboxListTile(
+                  title: Text("Select All"),
+                  value: tempSelected.length == items.length,
+                  onChanged: (val) {
+                    if (val == true) {
+                      tempSelected.addAll(items);
+                    } else {
+                      tempSelected.clear();
+                    }
+                    setState(() {});
+                    Navigator.pop(context);
+                    showMultiSelectFilter(
+                      items: items,
+                      selectedValues: tempSelected,
+                      onApply: onApply,
+                    );
+                  },
+                ),
+                Expanded(
+                  child: ListView(
+                    children: items.map((item) {
+                      return CheckboxListTile(
+                        title: Text(item),
+                        value: tempSelected.contains(item),
+                        onChanged: (val) {
+                          if (val == true) {
+                            tempSelected.add(item);
+                          } else {
+                            tempSelected.remove(item);
+                          }
+                          setState(() {});
+                          Navigator.pop(context);
+                          showMultiSelectFilter(
+                            items: items,
+                            selectedValues: tempSelected,
+                            onApply: onApply,
+                          );
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                tempSelected.clear();
+                onApply(tempSelected);
+                Navigator.pop(context);
+              },
+              child: Text("Clear"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                onApply(tempSelected);
+                Navigator.pop(context);
+              },
+              child: Text("Apply"),
+            ),
+          ],
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Attendance Summary"),
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text("Attendance Summary",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
           IconButton(
             icon: const Icon(Icons.date_range),
@@ -130,72 +281,135 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
           : Padding(
         padding: const EdgeInsets.all(8.0),
         child: Scrollbar(
+          controller: _horizontalController,
           thumbVisibility: true,
+          trackVisibility: true,
           child: SingleChildScrollView(
+            controller: _horizontalController,
             scrollDirection: Axis.horizontal,
             child: Scrollbar(
+              controller: _verticalController,
               thumbVisibility: true,
+              trackVisibility: true,
               child: SingleChildScrollView(
+                controller: _verticalController,
                 scrollDirection: Axis.vertical,
-                child: DataTable(
-                  border: TableBorder.all(
-                    color: Colors.grey,
-                    width: 1,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: MediaQuery.of(context).size.width,
                   ),
-                  headingRowColor:
-                  MaterialStateProperty.all(
-                      Colors.blue.shade50),
-                  headingRowHeight: 48,
-                  dataRowHeight: 46,
-                  columns: const [
-                    DataColumn(label: Text("UID")),
-                    DataColumn(label: Text("Name")),
-                    DataColumn(label: Text("Executive")),
-                    DataColumn(label: Text("Office Name")),
-                    DataColumn(label: Text("Total Days")),
-                    DataColumn(label: Text("Total Present")),
-                    DataColumn(label: Text("Total Absent")),
-                    DataColumn(label: Text("Total GPS Off")),
-                    DataColumn(label: Text("Total Internet Off")),
-                    DataColumn(label: Text("Total Outside Kiosk")),
-                    // DataColumn(label: Text("Total Late")),
-                    DataColumn(label: Text("Total Holiday")),
-                    DataColumn(label: Text("Missed Punch")),
-                    DataColumn(label: Text("Total Minutes")),
-                    DataColumn(label: Text("From Date")),
-                    DataColumn(label: Text("To Date")),
-                  ],
-                  rows: records.map((r) {
-                    print("----------");
-                    print(r.totalHour);
-                    print("============");
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(r.uid.toString())),
-                        DataCell(Text(r.name)),
-                        DataCell(Text(r.department)),
-                        DataCell(Text(r.officeName)),
-                        DataCell(Text(r.totalDays.toString())),
-                        DataCell(Text(r.totalPresent.toString())),
-                        DataCell(Text(r.totalAbsent.toString())),
-                        DataCell(Text(r.totalGps.toString())),
-                        DataCell(Text(r.totalInternet.toString())),
-                        DataCell(Text(r.totalOutside.toString())),
-                        // DataCell(Text(r.totalLate.toString())),
-                        DataCell(Text(r.totalHoliday.toString())),
-                        DataCell(Text(r.missedPunchOut.toString())),
-                        DataCell(Text(r.totalHour.toString())),
-                        DataCell(Text(formatDate(r.fromDate))),
-                        DataCell(Text(formatDate(r.toDate))),
-                      ],
-                    );
-                  }).toList(),
+                  child: DataTable(
+                    border: TableBorder.all(
+                      color: Colors.grey,
+                      width: 1,
+                    ),
+                    headingRowColor:
+                    MaterialStateProperty.all(
+                        Colors.blue.shade50),
+                    headingRowHeight: 48,
+                    dataRowHeight: 46,
+                    columns:  [
+                      DataColumn(label: Text("UID")),
+                      DataColumn(label: Text("Name")),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            Text("User Type"),
+                            IconButton(
+                              icon: Icon(
+                                Icons.filter_list,
+                                size: 18,
+                                color: selectedOffices.isNotEmpty
+                                    ? Colors.blue
+                                    : Colors.grey,
+                              ),
+                              onPressed: () {
+                                showMultiSelectFilter(
+                                  items: userTypeList,
+                                  selectedValues: selectedOffices,
+                                  onApply: (values) {
+                                    selectedOffices = values;
+                                    applyFilter();
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(
+                        label: Row(
+                          children: [
+                            Text("Office Name"),
+                            IconButton(
+                              icon: Icon(
+                                Icons.filter_list,
+                                size: 18,
+                                color: selectedOffices.isNotEmpty
+                                    ? Colors.blue
+                                    : Colors.grey,
+                              ),
+                              onPressed: () {
+                                showMultiSelectFilter(
+                                  items: officeList,
+                                  selectedValues: selectedOffices,
+                                  onApply: (values) {
+                                    selectedOffices = values;
+                                    applyFilter();
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      DataColumn(label: Text("Total Days")),
+                      DataColumn(label: Text("Total Present")),
+                      DataColumn(label: Text("Total Absent")),
+                      DataColumn(label: Text("Total GPS Off")),
+                      DataColumn(label: Text("Total Internet Off")),
+                      DataColumn(label: Text("Total Outside Kiosk")),
+                      DataColumn(label: Text("Total WO")),
+                      DataColumn(label: Text("Missed Punch")),
+                      DataColumn(label: Text("Total Late Marks")),
+                      DataColumn(label: Text("Total Break Time \n  (HH:MM:SS)")),
+                      DataColumn(label: Text("Total Working Time \n  (HH:MM:SS)")),
+                      //DataColumn(label: Text("Total Hours")),
+                      DataColumn(label: Text("From Date")),
+                      DataColumn(label: Text("To Date")),
+                    ],
+                    rows: records.map((r) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(r.uid.toString())),
+                          DataCell(Text(r.name)),
+                          DataCell(Text(r.department)),
+                          DataCell(Text(r.officeName)),
+                          DataCell(Text(r.totalDays.toString())),
+                          DataCell(Text(r.totalPresent.toString())),
+                          DataCell(Text(r.totalAbsent.toString())),
+                          DataCell(Text(r.totalGps.toString())),
+                          DataCell(Text(r.totalInternet.toString())),
+                          DataCell(Text(r.totalOutside.toString())),
+                          DataCell(Text(r.totalHoliday.toString())),
+                          DataCell(Text(r.missedPunchOut.toString())),
+                          DataCell(Text(r.totalLate.toString())),
+                          DataCell(Text(r.total_break_minutes.toString())),
+                          DataCell(Text(r.totalTimeFormate.toString())),
+                          //DataCell(Text(r.totalHour.toString())),
+                          DataCell(Text(formatDate(r.fromDate))),
+                          DataCell(Text(formatDate(r.toDate))),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
+
     );
   }
 }

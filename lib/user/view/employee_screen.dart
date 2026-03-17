@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import '../../admin/model/user_model.dart';
 import '../../admin/view/login_screen.dart';
+import '../controller/start_break_controller.dart';
 import '../view/punch_in_out_screen.dart';
 import '../view/user_attendance_screen.dart';
 import '../view/airport_form_screen.dart';
@@ -52,6 +54,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   void dispose() {
     gpsTimer?.cancel();
     connectivitySub?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -167,9 +170,12 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       debugPrint("✅ Offline punch-out synced");
 // ❌ REMOVE attendance_id
       await prefs.remove('attendance_id');
+      await prefs.remove('uid');
+      await prefs.remove('cid');
 
       // 🛑 STOP SERVICE
       FlutterBackgroundService().invoke('stopService');
+      logout(context);
       if (mounted) {
         Get.offAll(() => LoginScreen());
       }
@@ -205,9 +211,12 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         );
         // ❌ REMOVE attendance_id
         await prefs.remove('attendance_id');
+        await prefs.remove('cid');
+        await prefs.remove('uid');
 
         // 🛑 STOP SERVICE
         FlutterBackgroundService().invoke('stopService');
+        logout(context);
       } catch (_) {
         await saveLocalPunchOut(reason);
       }
@@ -252,7 +261,19 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   // }
 
   /* ---------------- LOCATION ---------------- */
-
+  /*----------------Logout------------------*/
+  // Future<void> logout(BuildContext context) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //
+  //   await prefs.clear();
+  //
+  //   Navigator.pushAndRemoveUntil(
+  //     context,
+  //     MaterialPageRoute(builder: (_) => LoginScreen()),
+  //         (route) => false,
+  //   );
+  // }
+  /*------------------------------------------*/
   Future<Position> getCurrentLocation() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw 'Location service disabled';
@@ -288,7 +309,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     gpsTimer?.cancel();
 
     gpsTimer = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 60),
           (_) async {
         await  loadAttendanceId();
         await loadLiveLocation(); // update currentPosition
@@ -344,8 +365,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       // 🛑 STOP SERVICE
       FlutterBackgroundService().invoke('stopService');
       await prefs.remove('attendance_id'); // 2️⃣ remove local
+      await prefs.remove('cid'); // 2️⃣ remove local
+      await prefs.remove('uid'); // 2️⃣ remove local
       setState(() => attendanceId = null);
       debugPrint("✅ Auto punch out done");
+      logout(context);
     } catch (e) {
       debugPrint("❌ Auto punch out failed: $e");
     }
@@ -411,8 +435,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       if (distance > allowedRadius) {
 
         await autoPunchOut(
-          "You are outside Kiosk radius (${distance.toStringAsFixed(0)}m)",
+          "You are outside Kiosk radius",
         );
+        // await autoPunchOut(
+        //   "You are outside Kiosk radius (${distance.toStringAsFixed(0)}m)",
+        // );
         Get.offAll(()=>LoginScreen());
       }
     } catch (e) {
@@ -421,18 +448,211 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   }
 
   /* ---------------- UI ---------------- */
+  bool isOnline = false;
+  Timer? _timer;
+  int _seconds = 0;
+  void _startTimer() {
+    _timer?.cancel();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (breakStartTime != null) {
+        final diff = DateTime.now().difference(breakStartTime!);
+
+        setState(() {
+          _seconds = diff.inSeconds;
+        });
+      }
+    });
+  }
+
+
+  void _startBreakDialog() {
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+
+            // Start timer when dialog builds
+            _timer?.cancel();
+            _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+              if (breakStartTime != null) {
+                final diff = DateTime.now().difference(breakStartTime!);
+
+                setDialogState(() {   // 👈 IMPORTANT
+                  _seconds = diff.inSeconds;
+                });
+              }
+            });
+
+            return AlertDialog(
+              title: const Text("Break Started"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.watch_later, size: 50),
+                  const SizedBox(height: 10),
+                  Text(
+                    _formatTime(_seconds),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () async {
+
+                    _timer?.cancel();   // 👈 stop timer first
+
+                    try {
+
+                      var response = await endBreakApi(
+                        attendanceId: attendanceId!,
+                        uid: widget.userModel.uid,
+                      );
+
+                      if (response['status'] == true) {
+
+                        Navigator.pop(context);
+
+                        setState(() {
+                          isOnline = false;
+                          breakStartTime = null;
+                          _seconds = 0;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "Break Ended\nDuration: ${response['break_minutes']} min",
+                            ),
+                          ),
+                        );
+
+                      }
+
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("End Break API Error"),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text("End Break"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  String _formatTime(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+
+    return "${hours.toString().padLeft(2, '0')}:"
+        "${minutes.toString().padLeft(2, '0')}:"
+        "${secs.toString().padLeft(2, '0')}";
+  }
+  DateTime? breakStartTime;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard"),
+        backgroundColor: Colors.blue,
+        title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 22,fontFamily: 'impact'),),
         actions: [
-         CircleAvatar(
-           child: Image.network(widget.userModel.userImg),
-         ),
+          attendanceId == null
+          ? SizedBox.shrink()
+          : Row(
+    children: [
+      Switch(
+        value: isOnline,
+        activeColor: Colors.green,
+        onChanged: (value) async {
+          setState(() {
+            isOnline = value;
+          });
+
+          if (isOnline) {
+            try {
+              var response = await startBreakApi(
+                attendanceId: attendanceId!,
+                uid: widget.userModel.uid,
+              );
+
+              if (response['status'] == true) {
+
+                breakStartTime =
+                    DateTime.parse(response['break_start_time']);
+
+                _startTimer();       // ✅ only this timer
+                _startBreakDialog(); // ✅ just open dialog
+
+              } else {
+                setState(() => isOnline = false);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(response['message'])),
+                );
+              }
+            } catch (e) {
+              setState(() => isOnline = false);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("API Error")),
+              );
+            }
+          }
+        },
+      )
+    ],
+    ),
+    CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.grey.shade200,
+            child: widget.userModel.userImg != null &&
+                widget.userModel.userImg!.isNotEmpty
+                ? ClipOval(
+              child: Image.network(
+                widget.userModel.userImg!,
+                width: 30,
+                height: 30,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.person,
+                    size: 30,
+                    color: Colors.grey,
+                  );
+                },
+              ),
+            )
+                : const Icon(
+              Icons.person,
+              size: 20,
+              color: Colors.grey,
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout,color: Colors.white,),
             onPressed: () => logout(context),
           ),
         ],
@@ -472,19 +692,26 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
             uid: widget.userModel.uid,
           )),
         ),
-        attendanceId==null?SizedBox.shrink():dashboardBox(
+        (attendanceId == null || widget.userModel.departmentName == "Team Leader")
+            ? SizedBox.shrink()
+            : dashboardBox(
           "Client Form",
           Icons.flight,
               () => Get.to(() => AirportFormScreen(userModel: widget.userModel)),
         ),
-        attendanceId==null?SizedBox.shrink():dashboardBox(
+
+        (attendanceId == null || widget.userModel.departmentName == "Team Leader")
+            ? SizedBox.shrink()
+            : dashboardBox(
           "Submitted Form",
           Icons.description,
               () => widget.userModel.departmentName == "Users"
               ? Get.to(() => SubmitFormScreen(userModel: widget.userModel))
               : Get.to(() => GetReportKioskScreen(userModel: widget.userModel)),
         ),
-        widget.userModel.departmentName=="Users"?SizedBox.shrink():dashboardBox(
+        widget.userModel.departmentName == "Users"
+            ? SizedBox.shrink()
+            : dashboardBox(
           "User Attendance",
           Icons.event_available,
               () => Get.to(() => OfficeAttendanceScreen(
@@ -503,55 +730,121 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     );
   }
 
-  Widget dashboardBox(String title, IconData icon, VoidCallback onTap) {
+  Widget dashboardBox(
+      String title,
+      IconData icon,
+      VoidCallback onTap,
+      ) {
     return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.blue),
-            const SizedBox(height: 10),
-            Text(title, textAlign: TextAlign.center),
-          ],
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(
+            color: Colors.blue, // 🔥 Border color
+            width: 1.5,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 20,
+            horizontal: 10,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 30,
+                color: Colors.blue,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+
   /* ---------------- EMPLOYEE INFO ---------------- */
 
   Widget employeeInfoCard() {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Table(
+          columnWidths: const {
+            0: IntrinsicColumnWidth(),
+            1: FlexColumnWidth(),
+          },
+          border: TableBorder.all(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(12),
+          ),
           children: [
-            infoRow("User ID", widget.userModel.userid),
-            infoRow("Name", widget.userModel.fullName),
-            infoRow("Branch", widget.userModel.branchName),
-            infoRow(
+            tableRow("User ID", widget.userModel.userid),
+            tableRow("Name", widget.userModel.fullName),
+            tableRow("Branch", widget.userModel.branchName),
+            tableRow(
               "Shift",
-              "${widget.userModel.shiftStart} - ${widget.userModel.shiftEnd}",
+              "${convertTo12Hour(widget.userModel.shiftStart)} - ${convertTo12Hour(widget.userModel.shiftEnd)}",
             ),
           ],
         ),
       ),
     );
   }
+  String convertTo12Hour(String? time) {
+    if (time == null || time.trim().isEmpty) {
+      return "--";
+    }
 
-  Widget infoRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 110, child: Text("$title:")),
-          Expanded(child: Text(value)),
-        ],
-      ),
+    try {
+      DateTime parsedTime = DateFormat("HH:mm:ss").parse(time);
+      return DateFormat("hh:mm a").format(parsedTime);
+    } catch (e) {
+      return "--";
+    }
+  }
+
+  TableRow tableRow(String title, String? value) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            value ?? "-",
+            style: const TextStyle(
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
     );
   }
+
 }

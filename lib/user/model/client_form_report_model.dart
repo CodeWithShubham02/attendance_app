@@ -6,18 +6,21 @@ class ClientFormReportModel {
   final String cityName;
   final String reportDate;
   final String reportTime;
-  final String applicationNo;
-  final String relation;
-  final String variant;
-  final String status;
-  final String remarks;
+  late final String applicationNo;
+  late final String relation;
+  late final String variant;
+  late final String status;
+  late final String remarks;
+  final String managerRemarks;
+  final String bankRemarks;
+  final String updateStatus;
   final String contactNo;
   final List<String> imageUrls;
   final String gpsLocation;
   final String kioskName;
   final String createdAt;
   final String updatedAt;
-  final String duplicateFrom;
+  late final String duplicateFrom;
 
   ClientFormReportModel({
     required this.id,
@@ -32,6 +35,9 @@ class ClientFormReportModel {
     required this.variant,
     required this.status,
     required this.remarks,
+    required this.managerRemarks,
+    required this.bankRemarks,
+    required this.updateStatus,
     required this.contactNo,
     required this.imageUrls,
     required this.gpsLocation,
@@ -55,6 +61,9 @@ class ClientFormReportModel {
       variant: json['variant'] ?? '',
       status: json['status'] ?? '',
       remarks: json['remarks'] ?? '',
+      managerRemarks: json['remark_manager'] ?? '',
+      bankRemarks: json['bank_remark_status'] ?? '',
+      updateStatus: json['bank_update_status'] ?? '',
       contactNo: json['contact_no'] ?? '',
       imageUrls: json['image_urls'] != null
           ? List<String>.from(json['image_urls'])
