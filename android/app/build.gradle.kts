@@ -31,9 +31,8 @@ android {
         minSdk = 23
         targetSdk = 34
         versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionName = "1.1.4"
     }
-
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
@@ -50,6 +49,7 @@ dependencies {
     )
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
 }
 
 

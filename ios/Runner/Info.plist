@@ -6,6 +6,29 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Joizone</string>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>This app needs location access to track your live location.</string>
+
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>This app needs background location access to track movement.</string>
+
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>This app needs background location access.</string>
+
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs camera access to capture images.</string>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs photo library access to select images.</string>
+
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app needs permission to save images.</string>
+
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+    </array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
