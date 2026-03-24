@@ -39,9 +39,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // 🔹 Fetch Attendance
   Future<void> fetchAttendanceByDate(DateTime date) async {
     setState(() => isLoading = true);
-
+    print("Selected Date: $selectedDate");
+    print("cid : ${widget.cid}");
+    print("uid : ${widget.uid}");
     final response = await http.post(
       Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_id.php"),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
       body: {
         "cid": widget.cid,
         "uid": widget.uid,

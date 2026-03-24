@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:joizone/admin/model/user_model.dart';
 import 'package:joizone/user/controller/user_login_controller.dart';
@@ -8,6 +10,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../user/view/employee_screen.dart';
 import 'admin_home_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
+
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -23,40 +30,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController userId = TextEditingController();
   final TextEditingController userPassword = TextEditingController();
   bool isLoading = false;
+  late GoogleSignIn googleSignIn;
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
       checkLogin();
+    // googleSignIn = GoogleSignIn(
+    //   clientId: "joizone.apps.googleusercontent.com",
+    //   scopes: [
+    //     'email',
+    //     'https://www.googleapis.com/auth/drive.readonly',
+    //   ],
+    // );
+
+
   }
-  Future<void> checkLogin() async {
-    final prefs = await SharedPreferences.getInstance();
 
-    String? uid = prefs.getString('uid');
-    print("--------------check in-----------------");
-    print(uid);
-    String? userData = prefs.getString('user_model');
 
-    if (uid != null && uid.isNotEmpty && userData != null && userData.isNotEmpty) {
-      try {
 
-        Map<String, dynamic> json = jsonDecode(userData);
-        UserModel userModel = UserModel.fromJson(json);
 
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmployeeHomeScreen(userModel: userModel),
-          ),
-        );
-
-      } catch (e) {
-        print("User model decode error: $e");
-      }
-    }
-  }
   void login() async {
     if (userId.text.isEmpty || userPassword.text.isEmpty) {
       ScaffoldMessenger.of(context)
@@ -134,7 +127,82 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  Future<void> checkLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? uid = prefs.getString('uid');
+    String? attendanceId =await  prefs.getString('attendance_id');
+    String? userData =prefs.getString('user_model');
+
+    print("UID: $uid");
+    print("Attendance ID: $attendanceId");
+    print("UserData: $userData");
+
+    /// ✅ CASE 1: VALID LOGIN
+    if (attendanceId != null &&
+        attendanceId.isNotEmpty &&
+        userData != null &&
+        userData.isNotEmpty) {
+      try {
+        Map<String, dynamic> json = jsonDecode(userData);
+        UserModel userModel = UserModel.fromJson(json);
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmployeeHomeScreen(userModel: userModel),
+          ),
+        );
+        return;
+
+      } catch (e) {
+        print("User model decode error: $e");
+      }
+    }
+
+    /// ❌ CASE 2: INVALID / LOGOUT → GO TO LOGIN
+    if (!mounted) return;
+
+    return;
+  }
+  Future<void> connectDriveAndSave(String uid) async {
+    try {
+      final googleSignIn = GoogleSignIn(
+        clientId: "joizone.apps.googleusercontent.com",
+        scopes: [
+          'email',
+          'https://www.googleapis.com/auth/drive.readonly',
+        ],
+      );
+
+      final account = await googleSignIn.signIn(); // works only on click
+
+      if (account == null) {
+        print("User cancelled");
+        return;
+      }
+
+      final authClient = await googleSignIn.authenticatedClient();
+      if (authClient == null) return;
+
+      final driveApi = drive.DriveApi(authClient);
+
+      final about = await driveApi.about.get($fields: "user");
+
+      await FirebaseFirestore.instance.collection("userDrive").add({
+        "uid": uid,
+        "email": about.user?.emailAddress,
+        "drive_link": "https://drive.google.com/drive/my-drive",
+      });
+
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
   Future<void> loginAdmin() async {
+    //await connectDriveAndSave("123");
     setState(() => isLoading = true);
 
     final response = await http.post(
@@ -153,7 +221,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('cid', data['data']['cid'].toString());
     await prefs.setString('role', 'admin');
-
 
     if (data['status'] == true) {
       Navigator.pushReplacement(

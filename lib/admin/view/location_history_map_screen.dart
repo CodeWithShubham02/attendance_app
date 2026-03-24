@@ -286,15 +286,17 @@ class _LocationHistoryMapScreenState
           children: [
             // 🗺 MAP
             SizedBox(
-              height: 350,
+              height: 400,
               child: GoogleMap(
                 initialCameraPosition:
                 CameraPosition(
                   target: _initialPosition!,
-                  zoom: 4,
+                  zoom: 15,
                 ),
                 markers: _markers,
                 polylines: _polylines,
+                mapType: MapType.normal,
+                zoomControlsEnabled: true,
                 onMapCreated: (controller) {
                   _controller.complete(controller);
                   _fitCamera();

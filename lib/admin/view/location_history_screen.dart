@@ -123,7 +123,7 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
                 border: OutlineInputBorder(),
               ),
               hint: const Text("Choose User"),
-              items: users.map((user) {
+              items: users.where((user) => user.status == "active").map((user) {
                 return DropdownMenuItem<UserModel>(
                   value: user,
                   child: Text(

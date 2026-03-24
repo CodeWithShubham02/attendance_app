@@ -1,9 +1,19 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:aws_s3_api/s3-2006-03-01.dart';
+import 'package:excel/excel.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:universal_html/html.dart' as html;
 import '../controller/user_controller.dart';
 import '../model/user_model.dart';
-
+import 'package:http/http.dart' as http;
 class UsersTableScreen extends StatefulWidget {
   const UsersTableScreen({super.key});
 
@@ -188,11 +198,174 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
     );
   }
 
+  Future<void> downloadExcel() async {
+    if (users.isEmpty) {
+      Get.snackbar("No Data", "No attendance data to export");
+      return;
+    }
+
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Users'];
+
+    // Header Row
+    sheetObject.appendRow([
+      TextCellValue("UID"),
+      TextCellValue("USERID"),
+      TextCellValue("PASSWORD"),
+      TextCellValue("FULL NAME"),
+      TextCellValue("IMAGE"),
+      TextCellValue("OFFICE NAME"),
+      TextCellValue("IMEI"),
+      TextCellValue("EMAIL"),
+      TextCellValue("PHONE"),
+      TextCellValue("GENDER"),
+      TextCellValue("ADDRESS"),
+      TextCellValue("DISTANCE"),
+      TextCellValue("OFFICE LAT"),
+      TextCellValue("OFFICE LONG"),
+      TextCellValue("USER TYPE"),
+      TextCellValue("SHIFT START"),
+      TextCellValue("SHIFT END"),
+      TextCellValue("JOINING DATE"),
+      TextCellValue("STATUS"),
+      TextCellValue("ROLE"),
+      TextCellValue("CREADTED"),
+      TextCellValue("UPDATED"),
+
+    ]);
+
+    // 🔵 DATA ROWS
+// 🔵 DATA ROWS
+    for (var u in users) {
+      sheetObject.appendRow([
+        TextCellValue(u.uid ?? ""),
+        TextCellValue(u.userid ?? ""),
+        TextCellValue(u.password ?? ""),
+        TextCellValue(u.fullName ?? ""),
+        TextCellValue(u.userImg ?? ""),
+        TextCellValue(u.branchName ?? ""),
+        TextCellValue(u.imeiNo ?? ""),
+        TextCellValue(u.userEmail ?? ""),
+        TextCellValue(u.userPhone ?? ""),
+        TextCellValue(u.gender ?? ""),
+        TextCellValue(u.fullAddress ?? ""),
+        TextCellValue(u.branchDistance ?? ""),
+        TextCellValue(u.branchLat ?? ""),
+        TextCellValue(u.branchLong ?? ""),
+        TextCellValue(u.departmentName ?? ""),
+        TextCellValue(u.shiftStart ?? ""),
+        TextCellValue(u.shiftEnd ?? ""),
+        TextCellValue(u.dateOfJoining ?? ""),
+        TextCellValue(u.status ?? ""),
+        TextCellValue(u.role ?? ""),
+        TextCellValue(u.createdAt ?? ""),
+        TextCellValue(u.updatedAt ?? ""),
+      ]);
+    }
+
+    final fileBytes = excel.encode();
+    if (fileBytes == null) return;
+
+    final fileName =
+        "USERS_LIST${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.xlsx";
+
+    if (kIsWeb) {
+      // 🌐 WEB DOWNLOAD
+      final content = base64Encode(fileBytes);
+      final anchor = html.AnchorElement(
+        href:
+        "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,$content",
+      )
+        ..setAttribute("download", fileName)
+        ..click();
+
+      Get.snackbar("Success", "Downloading Excel file...");
+    } else {
+      // 📱 ANDROID / IOS DOWNLOAD
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = "${directory.path}/$fileName";
+
+      final file = File(filePath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: "USERS Report",
+      );
+    }
+  }
 
   void deleteUser(UserModel user) {
-    print("Delete user: ${user.fullName}");
-    // TODO: Call delete API and refresh table
+    print("Delete userId: ${user.uid}");
+    print("Delete userName: ${user.fullName}");
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete User"),
+          content: Text("Are you sure you want to delete ${user.fullName}?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // ❌ cancel
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context); // dialog close
+                await callDeleteApi(user.uid); // ✅ API call
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
   }
+  Future<void> callDeleteApi(String uid) async {
+    try {
+      final url = Uri.parse(
+          "https://fms.bizipac.com/apinew/attendance/delete_user.php");
+
+      final response = await http.post(
+        url,
+        body: {
+          "uid": uid,
+        },
+      );
+
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("User deleted successfully")),
+          );
+          setState(() {
+            loadUsers();
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "Delete failed")),
+          );
+        }
+      }
+    } catch (e) {
+      print("Delete Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Something went wrong")),
+      );
+    }
+  }
+
+
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
   Set<String> selectedBranches = {};
@@ -270,7 +443,8 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
       actions: [
         IconButton(onPressed: (){
           //download the excel file
-          Get.snackbar("Working..", "");
+          downloadExcel();
+
         }, icon:Icon(Icons.download))
       ],),
       body: isLoading
@@ -324,9 +498,11 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                     ],
                   ),
                 ),
+                    DataColumn(label: Text("Status")),
+                    DataColumn(label: Text("Full Name")),
                     DataColumn(label: Text("Image")),
                     DataColumn(label: Text("IMEI")),
-                    DataColumn(label: Text("Full Name")),
+
                     DataColumn(label: Text("Email")),
                     DataColumn(label: Text("Phone")),
                     DataColumn(label: Text("Gender")),
@@ -338,7 +514,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                     DataColumn(label: Text("Shift Start")),
                     DataColumn(label: Text("Shift End")),
                     DataColumn(label: Text("Joining Date")),
-                    DataColumn(label: Text("Status")),
+
                     DataColumn(label: Text("Role")),
                     DataColumn(label: Text("Created At")),
                     DataColumn(label: Text("Updated At")),
@@ -362,6 +538,15 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                       DataCell(Text(u.userid)),
                       DataCell(Text(u.password)),
                       DataCell(Text(u.branchName)),
+                      DataCell(Text(
+                        u.status,
+                        style: TextStyle(
+                          color: u.status.toLowerCase() == 'active'
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      )),
+                      DataCell(Text(u.fullName)),
                       //DataCell(Text(u.userToken)),
                       DataCell(
                         u.userImg != null &&
@@ -377,7 +562,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                             : const Icon(Icons.image_not_supported),
                       ),
                       DataCell(Text(u.imeiNo)),
-                      DataCell(Text(u.fullName)),
+
                       DataCell(Text(u.userEmail)),
                       DataCell(Text(u.userPhone)),
                       DataCell(Text(u.gender)),
@@ -392,14 +577,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                       DataCell(Text(u.shiftStart)),
                       DataCell(Text(u.shiftEnd)),
                       DataCell(Text(u.dateOfJoining)),
-                      DataCell(Text(
-                        u.status,
-                        style: TextStyle(
-                          color: u.status.toLowerCase() == 'active'
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      )),
+
                       DataCell(Text(u.role)),
 
                       DataCell(Text(u.createdAt)),

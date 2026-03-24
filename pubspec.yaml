@@ -64,6 +64,10 @@ dependencies:
   encrypt: ^5.0.3
   aws_s3_api:
   universal_html:
+  google_sign_in: ^6.2.1
+  googleapis: ^11.0.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.0
+
 
 
 

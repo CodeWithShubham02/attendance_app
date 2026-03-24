@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:universal_html/js.dart';
 
 import '../model/user_model.dart';
 
@@ -162,6 +164,37 @@ class UserController {
 
     final data = json.decode(response.body);
     return data['status'] == true;
+  }
+  Future<void> callDeleteApi(String uid) async {
+    try {
+      final url = Uri.parse(
+          "https://fms.bizipac.com/apinew/attendance/delete_user.php?uid=$uid");
+
+      final response = await http.get(url);
+
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["status"] == true) {
+          ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+            const SnackBar(content: Text("User deleted successfully")),
+          );
+
+          fetchUsers(); // 🔄 refresh table
+        } else {
+          ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "Delete failed")),
+          );
+        }
+      }
+    } catch (e) {
+      print("Delete Error: $e");
+      ScaffoldMessenger.of(context as BuildContext).showSnackBar(
+        const SnackBar(content: Text("Something went wrong")),
+      );
+    }
   }
 
 }

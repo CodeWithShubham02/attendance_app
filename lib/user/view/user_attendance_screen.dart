@@ -118,66 +118,80 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
   }
   /// 📊 ATTENDANCE TABLE
   Widget buildAttendanceTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columnSpacing: 18,
-        headingRowColor:
-        MaterialStateProperty.all(Colors.blue.shade50),
-        border: TableBorder.all(
-          color: Colors.grey,
-          width: 1,
-        ),
-        columns: const [
-          DataColumn(label: Text("Name")),
-          DataColumn(label: Text("User Type")),
-          DataColumn(label: Text("Status")),
-          DataColumn(label: Text("Shift")),
-          DataColumn(label: Text("Punch In")),
-          DataColumn(label: Text("Punch Out")),
-          DataColumn(label: Text("In Img")),
-          DataColumn(label: Text("Out Img")),
-        ],
-        rows: filteredRecords.map((r) {
-          return DataRow(cells: [
-            DataCell(Text(r['name'] ?? "-")),
-            DataCell(Text(r['department'] ?? "-")),
-            DataCell(
-              Text(
-                r['status'] ?? "-",
-                style: TextStyle(
-                  color: r['status'] == 'Present'
-                      ? Colors.green
-                      : Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
+    return Scrollbar(
+      thumbVisibility: true,
+      trackVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Scrollbar(
+          thumbVisibility: true,
+          trackVisibility: true,
+          notificationPredicate: (notif) => notif.depth == 1,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 18,
+              headingRowColor:
+              MaterialStateProperty.all(Colors.blue.shade50),
+              border: TableBorder.all(
+                color: Colors.grey,
+                width: 1,
               ),
+              columns: const [
+                DataColumn(label: Text("Name")),
+                DataColumn(label: Text("User Type")),
+                DataColumn(label: Text("Status")),
+                DataColumn(label: Text("Shift")),
+                DataColumn(label: Text("Punch In")),
+                DataColumn(label: Text("Punch Out")),
+                // DataColumn(label: Text("Punch In Remark")),
+                // DataColumn(label: Text("Punch Out Remark")),
+                DataColumn(label: Text("In Img")),
+                DataColumn(label: Text("Out Img")),
+              ],
+              rows: filteredRecords.map((r) {
+                return DataRow(cells: [
+                  DataCell(Text(r['name'] ?? "-")),
+                  DataCell(Text(r['department'] ?? "-")),
+                  DataCell(
+                    Text(
+                      r['status'] ?? "-",
+                      style: TextStyle(
+                        color: r['status'] == 'Present'
+                            ? Colors.green
+                            : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text("${r['shiftStart']} - ${r['shiftEnd']}"),
+                  ),
+                  DataCell(Text(formatTime(r['punchIn']?['time']))),
+                  DataCell(Text(formatTime(r['punchOut']?['time']))),
+                  DataCell(
+                    r['punchIn']?['image'] != null
+                        ? IconButton(
+                      icon: const Icon(Icons.image),
+                      onPressed: () =>
+                          showImage(r['punchIn']['image']),
+                    )
+                        : const Text("-"),
+                  ),
+                  DataCell(
+                    r['punchOut']?['image'] != null
+                        ? IconButton(
+                      icon: const Icon(Icons.image),
+                      onPressed: () =>
+                          showImage(r['punchOut']['image']),
+                    )
+                        : const Text("-"),
+                  ),
+                ]);
+              }).toList(),
             ),
-            DataCell(
-              Text("${r['shiftStart']} - ${r['shiftEnd']}"),
-            ),
-            DataCell(Text(formatTime(r['punchIn']?['time']))),
-            DataCell(Text(formatTime(r['punchOut']?['time']))),
-            DataCell(
-              r['punchIn']?['image'] != null
-                  ? IconButton(
-                icon: const Icon(Icons.image),
-                onPressed: () =>
-                    showImage(r['punchIn']['image']),
-              )
-                  : const Text("-"),
-            ),
-            DataCell(
-              r['punchOut']?['image'] != null
-                  ? IconButton(
-                icon: const Icon(Icons.image),
-                onPressed: () =>
-                    showImage(r['punchOut']['image']),
-              )
-                  : const Text("-"),
-            ),
-          ]);
-        }).toList(),
+          ),
+        ),
       ),
     );
   }
@@ -202,7 +216,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
           style: const TextStyle(color: Colors.white),
           onChanged: filterByName,
         )
-            : Text("Attendance - ${widget.officeName}",style: TextStyle(color: Colors.white),),
+            : Text("Attendance - ${widget.officeName}",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
           IconButton(
             icon: Icon(

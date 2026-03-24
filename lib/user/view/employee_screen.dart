@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:joizone/user/view/userid_card_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -60,7 +61,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
 
   /* ---------------- INTERNET MONITOR ---------------- */
-
+  Timer? internetOffTimer;
   void startInternetMonitor() {
     connectivitySub = Connectivity()
         .onConnectivityChanged
@@ -68,33 +69,53 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       final hasInternet = await hasRealInternet();
 
       /// 🔴 INTERNET OFF
-      if (!hasInternet && attendanceId != null && !internetDialogShown) {
-        internetDialogShown = true;
+      if (!hasInternet && attendanceId != null) {
+        // agar pehle se timer nahi chal raha
+        if (internetOffTimer == null) {
+          internetOffTimer = Timer(const Duration(minutes: 3), () async {
+            final stillNoInternet = await hasRealInternet();
 
-        await autoPunchOutInternet(
-          "Internet turned off - Auto Punch Out",
-        );
+            if (!stillNoInternet &&
+                attendanceId != null &&
+                !internetDialogShown) {
+              internetDialogShown = true;
 
-        if (!mounted) return;
+              await autoPunchOutInternet(
+                "Internet turned off - Auto Punch Out",
+              );
 
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const AlertDialog(
-              title: Text("Internet Off"),
-              content: Text(
-                "Your internet connection is turned off.\n"
-                    "You have been auto punched out.",
-              ),
-            ),
-          );
-        });
+              if (!mounted) return;
+
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                await showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AlertDialog(
+                    title: Text("Internet Off"),
+                    content: Text(
+                      "Internet was off for 2 minutes.\n"
+                          "You have been auto punched out.",
+                    ),
+                  ),
+                );
+              });
+            }
+
+            internetOffTimer = null; // reset timer
+          });
+        }
       }
 
       /// 🟢 INTERNET BACK
       if (hasInternet) {
         internetDialogShown = false;
+
+        // agar timer chal raha tha toh cancel karo
+        if (internetOffTimer != null) {
+          internetOffTimer!.cancel();
+          internetOffTimer = null;
+        }
+
         await syncOfflinePunchOutIfAny();
       }
     });
@@ -239,7 +260,46 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     if (mounted) setState(() {});
   }
   /* ---------------- LOGOUT ---------------- */
+  Future<void> showLogoutDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // outside click se close na ho
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text("Logout"),
+          content: const Text("Are you sure you want to logout?"),
+          actions: [
 
+            // ❌ Cancel Button
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // dialog close
+              },
+              child: const Text(
+                "Cancel",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+
+            // ✅ OK Button
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context); // dialog close first
+                await logout(context);  // then logout
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+              ),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -583,7 +643,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           ? SizedBox.shrink()
           : Row(
     children: [
-      Switch(
+           Switch(
         value: isOnline,
         activeColor: Colors.green,
         onChanged: (value) async {
@@ -623,38 +683,55 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           }
         },
       )
-    ],
-    ),
-    CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.grey.shade200,
-            child: widget.userModel.userImg != null &&
-                widget.userModel.userImg!.isNotEmpty
-                ? ClipOval(
-              child: Image.network(
-                widget.userModel.userImg!,
-                width: 30,
-                height: 30,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.person,
-                    size: 30,
-                    color: Colors.grey,
-                  );
-                },
-              ),
-            )
-                : const Icon(
-              Icons.person,
-              size: 20,
-              color: Colors.grey,
+             ],
             ),
-          ),
-          IconButton(
+           InkWell(
+             onTap: (){
+               showDialog(
+                 context: context,
+                 builder: (context) => UserIdCardDialog(user: widget.userModel),
+               );
+             },
+             child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey.shade200,
+              child: widget.userModel.userImg.isNotEmpty
+                  ? ClipOval(
+                child: InkWell(
+                  onTap: (){
+                    showDialog(
+                      context: context,
+                      builder: (context) => UserIdCardDialog(user: widget.userModel),
+                    );
+                  },
+                  child: Image.network(
+                    widget.userModel.userImg,
+                    width: 30,
+                    height: 30,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.person,
+                        size: 30,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
+                ),
+              )
+                  : const Icon(
+                Icons.person,
+                size: 20,
+                color: Colors.grey,
+              ),
+                       ),
+           ),
+          attendanceId == null
+              ?IconButton(
             icon: const Icon(Icons.logout,color: Colors.white,),
-            onPressed: () => logout(context),
-          ),
+            onPressed: () => showLogoutDialog(context),
+          ): SizedBox.shrink(),
+          SizedBox(width: 10,)
         ],
       ),
       body: Padding(
@@ -667,6 +744,17 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: BottomAppBar(
+      child: SizedBox(
+        height: 20,
+        child: Center(
+          child: Text(
+            "Version: 1.1.6",
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+      ),
+    ),
     );
   }
 
@@ -728,6 +816,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
       ],
     );
+    
   }
 
   Widget dashboardBox(
