@@ -91,7 +91,32 @@ class _BranchListScreenState extends State<BranchListScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => delete(b.id),
+                        onPressed: () async {
+                          bool confirm = await showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: Text("Delete Kiosk"),
+                                content: Text("Are you sure you want to delete this kiosk?"),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false), // ❌ Cancel
+                                    child: Text("Cancel"),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                    onPressed: () => Navigator.pop(context, true), // ✅ Confirm
+                                    child: Text("Delete"),
+                                  ),
+                                ],
+                              );
+                            },
+                          ) ?? false;
+
+                          if (confirm) {
+                            delete(b.id); // ✅ Call your function
+                          }
+                        },
                       ),
                     ],
                   ),

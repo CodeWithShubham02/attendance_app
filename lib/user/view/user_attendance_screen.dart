@@ -139,20 +139,23 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
               ),
               columns: const [
                 DataColumn(label: Text("Name")),
-                DataColumn(label: Text("User Type")),
+
                 DataColumn(label: Text("Status")),
-                DataColumn(label: Text("Shift")),
+
                 DataColumn(label: Text("Punch In")),
                 DataColumn(label: Text("Punch Out")),
                 // DataColumn(label: Text("Punch In Remark")),
                 // DataColumn(label: Text("Punch Out Remark")),
                 DataColumn(label: Text("In Img")),
                 DataColumn(label: Text("Out Img")),
+                DataColumn(label: Text("User Type")),
+                DataColumn(label: Text("Shift")),
+
               ],
               rows: filteredRecords.map((r) {
                 return DataRow(cells: [
                   DataCell(Text(r['name'] ?? "-")),
-                  DataCell(Text(r['department'] ?? "-")),
+
                   DataCell(
                     Text(
                       r['status'] ?? "-",
@@ -164,9 +167,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
                       ),
                     ),
                   ),
-                  DataCell(
-                    Text("${r['shiftStart']} - ${r['shiftEnd']}"),
-                  ),
+
                   DataCell(Text(formatTime(r['punchIn']?['time']))),
                   DataCell(Text(formatTime(r['punchOut']?['time']))),
                   DataCell(
@@ -187,6 +188,11 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
                     )
                         : const Text("-"),
                   ),
+                  DataCell(Text(r['department'] ?? "-")),
+                  DataCell(
+                    Text("${r['shiftStart']} - ${r['shiftEnd']}"),
+                  ),
+
                 ]);
               }).toList(),
             ),

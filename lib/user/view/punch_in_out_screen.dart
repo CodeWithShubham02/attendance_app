@@ -26,7 +26,7 @@ import '../../handller/encription_decription.dart';
 class PunchInOutScreen extends StatefulWidget {
   UserModel userModel;
 
-   PunchInOutScreen({
+  PunchInOutScreen({
     super.key,
     required this.userModel,
   });
@@ -279,7 +279,8 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       setState(() => isLoadingPhoto = true);
 
       final XFile? picked =
-      await _picker.pickImage(source: source, imageQuality: 80,preferredCameraDevice: CameraDevice.front,);
+      await _picker.pickImage(source: source, imageQuality: 50,preferredCameraDevice: CameraDevice.front, maxWidth: 800,
+        maxHeight: 800,);
 
       if (picked == null) return null;
 
@@ -324,6 +325,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       setState(() => isLoadingPhoto = false);
     }
   }
+
   void deletePhoto() {
     setState(() {
       photo = null;
@@ -428,6 +430,53 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
   //   };
   // }
 
+  // Map<String, dynamic>  getPunchStatus({
+  //   required DateTime shiftStart,
+  //   required DateTime shiftEnd,
+  // }) {
+  //   final now = DateTime.now();
+  //
+  //   DateTime start = shiftStart;
+  //   DateTime end = shiftEnd;
+  //
+  //   // 🔥 Handle Night Shift Properly
+  //   if (end.isBefore(start)) {
+  //     // Means shift crosses midnight
+  //     if (now.isBefore(start)) {
+  //       start = start.subtract(const Duration(days: 1));
+  //     } else {
+  //       end = end.add(const Duration(days: 1));
+  //     }
+  //   }
+  //
+  //   final allowedStart = start.subtract(const Duration(minutes: 360));
+  //   final presentLimit = start.add(const Duration(minutes: 10));
+  //
+  //   // ❌ Too early
+  //   if (now.isBefore(allowedStart)) {
+  //     throw 'Punch allowed only after ${allowedStart.hour}:${allowedStart.minute.toString().padLeft(2, '0')}';
+  //   }
+  //
+  //   // ❌ Shift window over
+  //   if (now.isAfter(end)) {
+  //     throw 'Shift already ended';
+  //   }
+  //
+  //   // ✅ Late logic
+  //   final isLate = now.isAfter(presentLimit) ? 1 : 0;
+  //
+  //   // for example user shift time 10:00 am
+  //   //user punch in 10:11 late marks
+  //   //user punch after 1 hour 11:00 1 hr late
+  //   //user punch 12:00 half day
+  //
+  //   return {
+  //     'status': 'Present',
+  //     'late': isLate, //late varchar data type supose user ka shift 10:00 bje se hai
+  //     //agar user 10 bje se pahle punch in karta hai to late ke ander type ho eraly punch in
+  //     //agr 10
+  //   };
+  // }
   Map<String, dynamic>  getPunchStatus({
     required DateTime shiftStart,
     required DateTime shiftEnd,
@@ -447,9 +496,10 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       }
     }
 
-    final allowedStart = start.subtract(const Duration(minutes: 300));
-    final presentLimit = start.add(const Duration(minutes: 10));
-
+    final allowedStart = start.subtract(const Duration(minutes: 360));
+    // final presentLimit = start.add(const Duration(minutes: 10));
+    final onTimeLimit = start.add(Duration(minutes: 10));
+    final halfDayLimit = start.add(Duration(hours: 2));
     // ❌ Too early
     if (now.isBefore(allowedStart)) {
       throw 'Punch allowed only after ${allowedStart.hour}:${allowedStart.minute.toString().padLeft(2, '0')}';
@@ -461,16 +511,41 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     }
 
     // ✅ Late logic
-    final isLate = now.isAfter(presentLimit) ? 1 : 0;
+    String status = "";
+    String lateText = "";
 
-    // for example user shift time 10:00 am
-    //user punch in 10:11 late marks
-    //user punch after 1 hour 11:00 1 hr late
-    //user punch 12:00 half day
+    /// ✅ Early
+    if (now.isBefore(start)) {
+      status = "Present";
+      lateText = "Early Punch";
+    }
+
+    /// ✅ On Time
+    else if (now.isBefore(onTimeLimit)) {
+      status = "Present";
+      lateText = "On Time";
+    }
+
+    /// 🔥 Late
+    else if (now.isBefore(halfDayLimit)) {
+      status = "Present"; // 🔥 FIX
+
+      Duration diff = now.difference(start);
+      int hours = diff.inHours;
+      int minutes = diff.inMinutes % 60;
+
+      lateText = "Late";
+    }
+
+    /// ❗ Half Day
+    else {
+      status = "Present";
+      lateText = "Half Day";
+    }
 
     return {
-      'status': 'Present',
-      'late': isLate,
+      "status": status,
+      "late": lateText,
     };
   }
 
@@ -530,7 +605,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     locationTimer = Timer.periodic(
       const Duration(seconds: 60),
           (_) async {
-            if (!isTrackingActive || attendanceId == null) return;
+        if (!isTrackingActive || attendanceId == null) return;
         try {
           await checkGpsAndAutoPunchOut();
           if (!isTrackingActive || attendanceId == null) return;
@@ -614,7 +689,10 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
         "uid": widget.userModel.uid,
         "cid": widget.userModel.cid,
         'status': status['status'],
-        'late': status['late'].toString(), // 0 ya 1
+        // ✅ FIXED
+        "late": widget.userModel.departmentName == 'Team Leader'
+            ? "On Time"
+            : status['late'].toString(), // 0 ya 1
         "distance": currentDistance!.toString(),
         "department": widget.userModel.departmentName,
         "name": widget.userModel.fullName,
@@ -689,8 +767,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('attendance_id');
-    await prefs.remove('uid');
-    await prefs.remove('cid');
+    await prefs.clear();
 
     attendanceId = null;
 
@@ -764,6 +841,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       await prefs.remove('attendance_id');
       await prefs.remove('uid');
       await prefs.remove('cid');
+      await prefs.clear();
 
       // 🛑 STOP SERVICE
       FlutterBackgroundService().invoke('stopService');
@@ -775,7 +853,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
         ),
       );
 
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 4));
       Get.offAll(() => LoginScreen());
 
     } catch (e) {
@@ -797,13 +875,13 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       return time;
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-          title: const Text("Punch In / Out",style: TextStyle(color: Colors.white,fontSize: 16,fontFamily: 'impact'),),
+        title: const Text("Punch In / Out",style: TextStyle(color: Colors.white,fontSize: 16,fontFamily: 'impact'),),
         iconTheme: const IconThemeData(
           color: Colors.white, // 🔥 icon color
         ),),
@@ -964,7 +1042,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
                       await punchIn();
                       ScaffoldMessenger.of(context)
                           .showSnackBar(const SnackBar(content: Text("Punch In Done")));
-                      Get.back();
+                      Get.back(result: true);
                     } catch (e) {
                       ScaffoldMessenger.of(context)
                           .showSnackBar(SnackBar(content: Text(e.toString())));

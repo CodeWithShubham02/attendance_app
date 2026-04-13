@@ -44,6 +44,8 @@ class _GetReportKioskScreenState extends State<GetReportKioskScreen> {
       widget.userModel.branchName,
       date,
     );
+    print("----------report----------");
+    print(reports);
 
     setState(() => loading = false);
   }

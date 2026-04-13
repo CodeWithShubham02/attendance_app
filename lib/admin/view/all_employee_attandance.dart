@@ -3,14 +3,21 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:joizone/admin/view/shift_screen.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'assign_holiday_screen.dart';
+import 'monthly_attendance_screen.dart';
+import 'monthly_summary_screen.dart';
 
 class AllEmployeeAttendanceScreen extends StatefulWidget {
   final String cid;
@@ -238,6 +245,8 @@ class _AllEmployeeAttendanceScreenState
       },
     );
   }
+
+
   Future<void> updateAttendanceStatus({
     required BuildContext context,
     required String attendanceId,
@@ -433,6 +442,19 @@ class _AllEmployeeAttendanceScreenState
       },
     );
   }
+  //------Add the Pagination-------
+  int currentPage = 0;
+  final int rowsPerPage = 15;
+  List<Map<String, dynamic>> getPaginatedRecords(List<Map<String, dynamic>> data) {
+    final start = currentPage * rowsPerPage;
+    final end = start + rowsPerPage;
+
+    return data.sublist(
+      start,
+      end > data.length ? data.length : end,
+    );
+  }
+  //-------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -456,9 +478,31 @@ class _AllEmployeeAttendanceScreenState
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("Daily Attendance",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
+          ElevatedButton(onPressed: (){
+            Get.to(()=>MonthlyAttendanceScreen(cid:widget.cid));
+          }, child: Text("Monthly  View")),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>AttendanceSummaryScreen());
+          }, child: Text("Summary View")),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>AssignHolidayScreen());
+          }, child: Text("Roster")),// Get.to(()=>ShiftScreen(cid:widget.cid));
+          SizedBox(
+            width: 10,
+          ),
+
           IconButton(
               icon: const Icon(Icons.calendar_today),
               onPressed: pickDate),
+          SizedBox(
+            width: 10,
+          ),
         ],
       ),
       body: isLoading
@@ -498,8 +542,8 @@ class _AllEmployeeAttendanceScreenState
                   columns: [
                     const DataColumn(label: Text("Location")),
                     const DataColumn(label: Text("Date")),
-                    const DataColumn(label: Text("Uid")),
-                    const DataColumn(label: Text("aid")),
+                    const DataColumn(label: Text("eid")),
+                    //const DataColumn(label: Text("aid")),
                     DataColumn(
                       label: Row(
                         children: [
@@ -575,13 +619,6 @@ class _AllEmployeeAttendanceScreenState
                         ],
                       ),
                     ),
-                    const DataColumn(label: Text("Shift Time")),
-                    const DataColumn(label: Text("Punch In Time")),
-                    const DataColumn(label: Text("Punch In Remark")),
-                    const DataColumn(label: Text("Punch In Image")),
-                    const DataColumn(label: Text("Punch Out Time")),
-                    const DataColumn(label: Text("Punch Out Remark")),
-                    const DataColumn(label: Text("Punch Out Image")),
                     DataColumn(
                       label: Row(
                         children: [
@@ -607,6 +644,14 @@ class _AllEmployeeAttendanceScreenState
                         ],
                       ),
                     ),
+                    const DataColumn(label: Text("Shift Time")),
+                    const DataColumn(label: Text("Punch In Time")),
+                    const DataColumn(label: Text("Punch In Remark")),
+                    const DataColumn(label: Text("Punch In Image")),
+                    const DataColumn(label: Text("Punch Out Time")),
+                    const DataColumn(label: Text("Punch Out Remark")),
+                    const DataColumn(label: Text("Punch Out Image")),
+
                     // DataColumn(label: Text("Late")),
                     const DataColumn(label: Text("Working Hours")),
                     // DataColumn(label: Text("Break Min")),
@@ -663,28 +708,59 @@ class _AllEmployeeAttendanceScreenState
                             IconButton(
                               icon: const Icon(Icons.delete,
                                   color: Colors.red),
-                              onPressed: () async{
-                                final attendanceId=e['id'] ?? '-';
-                                print(attendanceId);
-                                final res = await http.post(
-                                  Uri.parse("https://fms.bizipac.com/apinew/attendance/delete_attendance_by_id.php"),
-                                  body: {
-                                    "attendance_id": attendanceId,
-                                  },
-                                );
-                                if (res.statusCode == 200) {
-                                  final data = jsonDecode(res.body);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("Attendance deleted (ID: $attendanceId)"),
-                                      backgroundColor: Colors.green,
-                                    ),
+                                onPressed: () async {
+                                  final attendanceId = e['id'] ?? '-';
+
+                                  bool confirm = await showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text("Confirm Delete"),
+                                        content: Text("Are you sure you want to delete this attendance?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(context, false); // ❌ Cancel
+                                            },
+                                            child: Text("Cancel"),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              Navigator.pop(context, true); // ✅ Confirm
+                                            },
+                                            child: Text("Delete"),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ) ?? false;
+
+                                  // ❌ If user cancels → stop
+                                  if (!confirm) return;
+
+                                  print(attendanceId);
+
+                                  final res = await http.post(
+                                    Uri.parse("https://fms.bizipac.com/apinew/attendance/delete_attendance_by_id.php"),
+                                    body: {
+                                      "attendance_id": attendanceId,
+                                    },
                                   );
 
-                                  // 🔙 Go back & notify previous screen
-                                  Navigator.pop(context, true);
-                                }
-                              },
+                                  if (res.statusCode == 200) {
+                                    final data = jsonDecode(res.body);
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Attendance deleted (ID: $attendanceId)"),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+
+                                    // 🔙 Go back & notify previous screen
+                                    Navigator.pop(context, true);
+                                  }
+                                },
                             ),
                           ],
                         ),
@@ -700,10 +776,17 @@ class _AllEmployeeAttendanceScreenState
                         ),
                       ),
                       DataCell(Text(e['uid'] ?? '-')),
-                      DataCell(Text(e['id'] ?? '-')),
+                     // DataCell(Text(e['id'] ?? '-')),
                       DataCell(Text(e['name'] ?? '-')),
                       DataCell(Text(e['office_name'] ?? '-')),
                       DataCell(Text(e['department'] ?? '-')),
+                      DataCell(
+                        Text(
+                          e['status'] == 'HOLYDAY'
+                              ? 'WO'
+                              : (e['status'] ?? '-'),
+                        ),
+                      ),
                       DataCell(
                         Row(
                           children: [
@@ -725,6 +808,7 @@ class _AllEmployeeAttendanceScreenState
                           ],
                         ),
                       ),
+
                       DataCell(
                         Text(
                           punchIn != null
@@ -795,7 +879,7 @@ class _AllEmployeeAttendanceScreenState
                             : const Icon(Icons
                             .image_not_supported),
                       ),
-                      DataCell(Text(e['status'] ?? '-')),
+
                       // DataCell(Text(e['late'] ?? '-')),
                       DataCell(Text(working)),
                       // DataCell(Text(

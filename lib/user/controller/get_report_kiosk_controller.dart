@@ -18,7 +18,9 @@ class GetReportKioskController {
       if (res.statusCode == 200) {
 
         final jsonData = json.decode(res.body);
-
+          print("---------Kiosk By-----------");
+          print(jsonData);
+          print("--------------------");
         if (jsonData['status'] == true) {
           return (jsonData['data'] as List)
               .map((e) => ClientFormReportModel.fromJson(e))

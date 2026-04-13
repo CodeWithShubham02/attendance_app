@@ -24,19 +24,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-
-
-
-Future<void> logout(BuildContext context) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear();
-
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => LoginScreen()),
-        (route) => false,
-  );
-}
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
@@ -76,7 +63,7 @@ class _MyAppState extends State<MyApp> {
       ),
       home: LoginScreen(),
       //home: EmployeeHomeScreen(userModel: userModel,),
-    //home: AdminHomeScreen(cid: "1"),
+       // home: AdminHomeScreen(cid: "1"),
     );
   }
 }

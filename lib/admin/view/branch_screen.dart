@@ -52,43 +52,90 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
         iconTheme: IconThemeData(
           color: Colors.white
         ),
-          backgroundColor: Colors.blue,title: const Text("Add Kiosk",style: TextStyle(color: Colors.white,fontSize: 18),),
+          backgroundColor: Colors.blue,title: const Text("Create Kiosk",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
-          IconButton(onPressed: (){
+          ElevatedButton(onPressed: (){
             Get.to(()=>BranchListScreen(cid: widget.cid));
-          }, icon: Icon(Icons.navigate_next))
+          }, child: Text("All Kiosk"))
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: "Branch Name"),
+
+            // 🔹 Row 1 → Kiosk Name + Distance
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Kiosk Name",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: distanceCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Distance",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: distanceCtrl,
-              decoration: const InputDecoration(labelText: "Distance"),
+
+            // 🔹 Row 2 → Latitude + Longitude
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: latCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Latitude",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: longCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Longitude",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: latCtrl,
-              decoration: const InputDecoration(labelText: "Latitude"),
-            ),
-            TextField(
-              controller: longCtrl,
-              decoration: const InputDecoration(labelText: "Longitude"),
-            ),
+
             const SizedBox(height: 20),
+
+            // 🔹 Button
             ElevatedButton(
               onPressed: isLoading ? null : saveBranch,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue, // 🔥 Punch out color
+                backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 elevation: 3,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
-                  vertical: 10,
+                  vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -99,9 +146,13 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
                 ),
               ),
               child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(color: Colors.white),
+              )
                   : const Text("Save"),
-            )
+            ),
           ],
         ),
       ),

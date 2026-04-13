@@ -240,7 +240,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
                       row("Shift End",
                           Text(attendanceData?['shiftEnd']?.toString() ?? "-")),
-                      row("Late",
+                      row("Late Status",
                           Text(attendanceData?['late'] ?? '-')),
 
                       row(

@@ -29,10 +29,18 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final useridCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
   final nameCtrl = TextEditingController();
+  // ----------------------------
+  final lastNameCtrl = TextEditingController();
+  final middleNameCtrl = TextEditingController();
+  final cityNameCtrl = TextEditingController();
+  final pinCodeCtrl = TextEditingController();
+  final districtNameCtrl = TextEditingController();
+  final reportingPositionCtrl = TextEditingController();
+  // -------------------------------
   final emailCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final fullAddressCtrl = TextEditingController();
-  final genderCtrl=TextEditingController();
+  final genderCtrl = TextEditingController();
   String? selectedGender;
   bool loading = false;
 
@@ -40,7 +48,33 @@ class _AddUserScreenState extends State<AddUserScreen> {
   DateTime? selectedDate;
   TextEditingController dateController = TextEditingController();
   Future<void> submitUser() async {
-    print("date of joing ${dateController}");
+    if (useridCtrl.text.isEmpty ||
+        passwordCtrl.text.isEmpty ||
+        nameCtrl.text.isEmpty ||
+        lastNameCtrl.text.isEmpty ||
+        districtNameCtrl.text.isEmpty ||
+        pinCodeCtrl.text.isEmpty ||
+        cityNameCtrl.text.isEmpty ||
+        emailCtrl.text.isEmpty ||
+        phoneCtrl.text.isEmpty ||
+        selectedBranchId == null ||
+        selectedShiftId == null ||
+        selectedDepartId == null ||
+        selectedGender == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("⚠️ Please fill all required fields")),
+      );
+      return;
+    }
+    print("date of joing ${dateController.text}");
+    if (selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select Date of Joining")),
+      );
+      return;
+    }
+
+    //String apiDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
     // ✅ API format (yyyy-MM-dd)
     String apiDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
     final success = await _controller1.createUser(
@@ -66,17 +100,22 @@ class _AddUserScreenState extends State<AddUserScreen> {
       shiftEnd: selectedShiftEnd ?? "",
       dateOfJoining: apiDate, // DD-MM-YYYY or YYYY-MM-DD
       imeiNo: "",
+      middleName: middleNameCtrl.text,
+      lastName: lastNameCtrl.text,
+      cityName: cityNameCtrl.text,
+      districtName: districtNameCtrl.text,
+      pinCodeName: pinCodeCtrl.text,
     );
     print("date of joing $dateController");
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ User Created Successfully")),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success["message"]),
+        backgroundColor: success["status"] ? Colors.green : Colors.red,
+      ),
+    );
+
+    if (success["status"] == true) {
       Get.back();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ User not created.")),
-      );
     }
   }
 
@@ -93,11 +132,11 @@ class _AddUserScreenState extends State<AddUserScreen> {
         selectedDate = picked;
 
         // ✅ UI format (dd-MM-yyyy)
-        dateController.text =
-            DateFormat('dd-MM-yyyy').format(picked);
+        dateController.text = DateFormat('dd-MM-yyyy').format(picked);
       });
     }
   }
+
   //branch
   final BranchController _controller = BranchController();
   List<BranchModel> branchList = [];
@@ -109,27 +148,25 @@ class _AddUserScreenState extends State<AddUserScreen> {
   bool isLoading = false;
 
   //shift
-  final ShiftController _shiftController=ShiftController();
-  List<ShiftModel> shiftList=[];
+  final ShiftController _shiftController = ShiftController();
+  List<ShiftModel> shiftList = [];
   String? selectedShiftId;
   String? selectedShiftStart;
   String? selectedShiftEnd;
   bool isShiftLoading = false;
 
   //department
-  final DepartmentController _departmentController=DepartmentController();
-  List<DepartmentModel> departmentList=[];
+  final DepartmentController _departmentController = DepartmentController();
+  List<DepartmentModel> departmentList = [];
   String? selectedDepartId;
   String? selectedDepartName;
-  bool isDepartLoading=false;
+  bool isDepartLoading = false;
 
   //photo
   bool isLoadingPhoto = false;
-  File? photo;          // Mobile
+  File? photo; // Mobile
   Uint8List? webPhoto; // Web
-  String? photoUrl;     // Uploaded URL
-
-
+  String? photoUrl; // Uploaded URL
 
   @override
   void initState() {
@@ -139,14 +176,17 @@ class _AddUserScreenState extends State<AddUserScreen> {
     loadShift();
     loadDepartment();
   }
+
   final ImagePicker _picker = ImagePicker();
 
   Future<String?> pickImagePhoto1(ImageSource source) async {
     try {
       setState(() => isLoadingPhoto = true);
 
-      final XFile? picked =
-      await _picker.pickImage(source: source, imageQuality: 80);
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
 
       if (picked == null) {
         setState(() => isLoadingPhoto = false);
@@ -214,8 +254,6 @@ class _AddUserScreenState extends State<AddUserScreen> {
     return "https://$bucket.s3.$region.amazonaws.com/$objectKey";
   }
 
-
-
   void deletePhoto() {
     setState(() {
       photo = null;
@@ -223,11 +261,10 @@ class _AddUserScreenState extends State<AddUserScreen> {
       photoUrl = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("✅ Photo deleted")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("✅ Photo deleted")));
   }
-
 
   Future<void> loadBranches() async {
     final list = await _controller.getBranches("1"); // cid = 1
@@ -237,359 +274,445 @@ class _AddUserScreenState extends State<AddUserScreen> {
       isLoading = false;
     });
   }
-  Future<void> loadShift() async{
-    final list=await _shiftController.fetchShifts("1");
+
+  Future<void> loadShift() async {
+    final list = await _shiftController.fetchShifts("1");
     setState(() {
-      shiftList=list;
-      isShiftLoading=false;
+      shiftList = list;
+      isShiftLoading = false;
     });
   }
-  Future<void> loadDepartment() async{
-    final list=await _departmentController.fetchDepartments("1");
+
+  Future<void> loadDepartment() async {
+    final list = await _departmentController.fetchDepartments("1");
     setState(() {
-      departmentList=list;
-      isDepartLoading=false;
+      departmentList = list;
+      isDepartLoading = false;
     });
   }
+
   @override
   void dispose() {
     // TODO: implement dispose
     super.dispose();
     photoUrl = null;
-
   }
+
+  bool isPasswordVisible = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: Colors.blue,
-          iconTheme: IconThemeData(color: Colors.white),
-          title: const Text("Create User",style: TextStyle(color: Colors.white,fontSize: 18),)),
+        backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: const Text(
+          "Create User",
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                  controller: useridCtrl,
-                  decoration: const InputDecoration(
-                      hint: Row(
-                        children: [
-                          Text("User Id "),
-                          Text("*",style: TextStyle(color: Colors.red),),
-                        ],
+            /// 🔥 ROW (3 FIELDS)
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: useridCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "User Id *",
+                        border: OutlineInputBorder(),
                       ),
-                      border: OutlineInputBorder())),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: passwordCtrl,
-                  decoration: const InputDecoration(
-                      hint: Row(
-                        children: [
-                          Text("Password "),
-                          Text("*",style: TextStyle(color: Colors.red),),
-                        ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: passwordCtrl,
+
+                      // 👇 IMPORTANT
+                      obscureText: !isPasswordVisible,
+
+                      decoration: InputDecoration(
+                        labelText: "Password *",
+                        border: const OutlineInputBorder(),
+
+                        // 👁️ Eye icon
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isPasswordVisible = !isPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
-                  border: OutlineInputBorder())),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: nameCtrl, decoration: const InputDecoration(
-                  hint: Row(
-                    children: [
-                      Text("Full Name "),
-                      Text("*",style: TextStyle(color: Colors.red),),
-                    ],
+                    ),
                   ),
-                  border: OutlineInputBorder())),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: emailCtrl, decoration: const InputDecoration(
-                  hint: Row(
-                    children: [
-                      Text("Email "),
-                      Text("*",style: TextStyle(color: Colors.red),),
-                    ],
-                  ),
-                  border: OutlineInputBorder())),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: phoneCtrl,
-                  decoration: const InputDecoration(
-                      hint: Row(
-                        children: [
-                          Text("Phone "),
-                          Text("*",style: TextStyle(color: Colors.red),),
-                        ],
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "First Name *",
+                        border: OutlineInputBorder(),
                       ),
-                      border: OutlineInputBorder())),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: DropdownButtonFormField<String>(
-                value: selectedGender,
-                decoration: const InputDecoration(
-                  labelText: "Gender",
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: "Male",
-                    child: Text("Male"),
+                    ),
                   ),
-                  DropdownMenuItem(
-                    value: "Female",
-                    child: Text("Female"),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: middleNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Middle Name *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedGender = value;
-                    genderCtrl.text = value ?? "";
-                    debugPrint(selectedGender);
-                    debugPrint(genderCtrl.text);
-                  });
-                },
-              ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: lastNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Last Name *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: emailCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Email *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(controller: fullAddressCtrl, decoration: const InputDecoration(labelText: "Full Address",border: OutlineInputBorder())),
+
+            Row(
+              children: [
+
+                /// PHONE
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: "Phone *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// GENDER
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: DropdownButtonFormField<String>(
+                      value: selectedGender,
+                      decoration: const InputDecoration(
+                        labelText: "Gender",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: "Male", child: Text("Male")),
+                        DropdownMenuItem(value: "Female", child: Text("Female")),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedGender = value;
+                          genderCtrl.text = value ?? "";
+                        });
+                      },
+                    ),
+                  ),
+                ),
+
+                /// DATE OF JOINING
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: dateController,
+                      readOnly: true,
+                      onTap: () => selectDate(context),
+                      decoration: const InputDecoration(
+                        labelText: "Date of Joining",
+                        hintText: "DD-MM-YYYY",
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextFormField(
-                controller: dateController,
-                readOnly: true,
-                onTap: () => selectDate(context),
-                decoration: const InputDecoration(
-                  labelText: "Date of Joining",
-                  hintText: "DD-MM-YYYY",
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
+            Row(
+              children: [
+
+                /// BRANCH
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                      value: selectedBranchId,
+                      hint: const Text("Select Kiosk *"),
+                      items: branchList.map((branch) {
+                        return DropdownMenuItem<String>(
+                          value: branch.id,
+                          child: Text(branch.branchName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        final branch =
+                        branchList.firstWhere((b) => b.id == value);
+                        setState(() {
+                          selectedBranchId = branch.id;
+                          selectedBranchName = branch.branchName;
+                          selectedBranchLat = branch.lat;
+                          selectedBranchLong = branch.long;
+                          selectedBranchDistance = branch.distance;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+
+                /// SHIFT
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: isShiftLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                      value: selectedShiftId,
+                      hint: const Text("Select Shift *"),
+                      items: shiftList.map((shift) {
+                        return DropdownMenuItem<String>(
+                          value: shift.shiftId,
+                          child: Text(
+                            "${shift.shiftStart} - ${shift.shiftEnd}",
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        final shift =
+                        shiftList.firstWhere((b) => b.shiftId == value);
+                        setState(() {
+                          selectedShiftId = shift.shiftId;
+                          selectedShiftStart = shift.shiftStart;
+                          selectedShiftEnd = shift.shiftEnd;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// DEPARTMENT
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: isDepartLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                      value: selectedDepartId,
+                      hint: const Text("Select User Type *"),
+                      items: departmentList.map((depart) {
+                        return DropdownMenuItem(
+                          value: depart.id,
+                          child: Text(depart.name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        final department =
+                        departmentList.firstWhere((b) => b.id == value);
+                        setState(() {
+                          selectedDepartId = department.id;
+                          selectedDepartName = department.name;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            //branch
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : DropdownButtonFormField<String>(
-                hint: Row(
-                  children: [
-                    Text("Select Kiosk "),
-                    Text("*",style: TextStyle(color: Colors.red),),
-                  ],
-                ),
-                value: selectedBranchId,
-                items: branchList.map((branch) {
-                  return DropdownMenuItem<String>(
-                    value: branch.id,
-                    child: Text(branch.branchName),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  final branch = branchList.firstWhere(
-                        (b) => b.id == value,
-                  );
+            Row(
+              children: [
 
-                  setState(() {
-                    selectedBranchId = branch.id;
-                    selectedBranchName = branch.branchName;
-                    selectedBranchLat = branch.lat;
-                    selectedBranchLong = branch.long;
-                    selectedBranchDistance = branch.distance;
-                  });
-
-                  debugPrint("Selected Branchid: ${branch.id}");
-                  debugPrint("Selected BranchName: ${branch.branchName}");
-                  debugPrint("Selected BranchLat: ${branch.lat}");
-                  debugPrint("Selected BranchLong: ${branch.long}");
-                  debugPrint("Selected BranchDist: ${branch.distance}");
-                },
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                /// CITY NAME
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: cityNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "City Name *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+
+                /// DISTRICT NAME
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: districtNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "District Name *",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// FULL ADDRESS
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: fullAddressCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Full Address",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            //shift
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: isShiftLoading? const Center(child: CircularProgressIndicator()):
-              DropdownButtonFormField<String>(
-                hint: Row(
-                  children: [
-                    Text("Select Shift "),
-                    Text("*",style: TextStyle(color: Colors.red),),
-                  ],
+            Row(
+              children: [
+                Expanded(
+                  child:Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextFormField(
+                    controller: pinCodeCtrl,
+                    decoration: const InputDecoration(
+                      labelText: "Pin Code *",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                 ),
-                value: selectedShiftId,
-                items: shiftList.map((shift) {
-                  return DropdownMenuItem<String>(
-                    value: shift.shiftId,
-                    child: Text("${shift.shiftStart} - ${shift.shiftEnd}"),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  final shift = shiftList.firstWhere(
-                        (b) => b.shiftId == value,
-                  );
-
-                  setState(() {
-                    selectedShiftId = shift.shiftId;
-                    selectedShiftStart = shift.shiftStart;
-                    selectedShiftEnd = shift.shiftEnd;
-                  });
-
-                  debugPrint("Selected shiftid: ${shift.shiftId}");
-                  debugPrint("Selected shiftstart: ${shift.shiftStart}");
-                  debugPrint("Selected shiftend: ${shift.shiftEnd}");
-                },
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                 ),
-              ),),
-            //department
-            Padding(padding: EdgeInsets.all(8.0),
-            child: isDepartLoading?const Center(
-              child: CircularProgressIndicator()):DropdownButtonFormField<String>(
-              hint: Row(
-                children: [
-                  Text("Select User Type "),
-                  Text("*",style: TextStyle(color: Colors.red),),
-                ],
-              ),
-                value: selectedDepartId,
-                items: departmentList.map((depart){
-                  return DropdownMenuItem(
-                    value: depart.id,
-                      child: Text(depart.name),
-                  );
-                }).toList(),
-                onChanged: (value){
-                  final department=departmentList.firstWhere((b)=>b.id==value,);
-                  setState(() {
-                    selectedDepartId=department.id;
-                    selectedDepartName=department.name;
-                  });
-                  debugPrint("Selected departId: ${department.id}");
-                  debugPrint("Selected departName: ${department.name}");
-                },
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-            ),),),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                      value: selectedBranchId,
+                      hint: const Text("Reporting Position"),
+                      items: branchList.map((branch) {
+                        return DropdownMenuItem<String>(
+                          value: branch.id,
+                          child: Text("Reporting Position : ${branch.branchName}"),
+                        );
+                      }).toList(),
+
+                      // ✅ ONLY SELECT, NO EXTRA LOGIC
+                      onChanged: (value) {
+
+                      },
+
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+
+
+            /// IMAGE PICKER
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    height: 80,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: isLoadingPhoto
-                              ? const CircularProgressIndicator()
-                              : kIsWeb
-                              ? webPhoto == null
-                              ? InkWell(
-                            onTap: () => pickImagePhoto1(
-                                ImageSource.gallery),
-                            child: const Text(
-                              "No image\nselected",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.white),
-                            ),
-                          )
-                              : Image.memory(
-                            webPhoto!,
-                            fit: BoxFit.cover,
-                            width: 75,
-                            height: 75,
-                          )
-                              : photo == null
-                              ? InkWell(
-                            onTap: () async{
-                              final imageUrl = await pickImagePhoto1(ImageSource.camera);
-                              print("Uploaded Image URL: $imageUrl");
-
-                            },
-                            child: const Text(
-                              "No image\nselected",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.white),
-                            ),
-                          )
-                              : Image.file(
-                            photo!,
-                            fit: BoxFit.cover,
-                            width: 75,
-                            height: 75,
+              child: Container(
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  border: Border.all(color: Colors.black),
+                ),
+                child: Center(
+                  child: isLoadingPhoto
+                      ? const CircularProgressIndicator()
+                      : photo == null
+                      ? InkWell(
+                          onTap: () async {
+                            final imageUrl = await pickImagePhoto1(
+                              ImageSource.camera,
+                            );
+                            print("Uploaded Image URL: $imageUrl");
+                          },
+                          child: const Text(
+                            "Select Image",
+                            style: TextStyle(fontSize: 10, color: Colors.white),
                           ),
-                        ),
-                        if (photo != null || webPhoto != null)
-                          Positioned(
-                            top: -2,
-                            right: -2,
-                            child: InkWell(
-                              onTap: deletePhoto,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.black,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: const Icon(
-                                  Icons.delete_forever,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+                        )
+                      : Image.file(photo!, fit: BoxFit.cover),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: loading ? null : submitUser,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue, // 🔥 Punch out color
-                foregroundColor: Colors.white,
-                elevation: 3,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 10,
+
+            /// BUTTON
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: ElevatedButton(
+                onPressed: loading ? null : submitUser,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 12,
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Create User"),
               ),
-              child: loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Create User"),
-            )
+            ),
           ],
         ),
       ),

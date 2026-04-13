@@ -50,7 +50,7 @@ dependencies:
   pdf:
   geocoding:
   google_maps_flutter_web: ^0.5.14+3
-  flutter_background_service:
+  flutter_background_service: ^5.0.5
   flutter_background_service_android:
   excel: ^4.0.3
   path_provider: ^2.1.2
@@ -67,7 +67,9 @@ dependencies:
   google_sign_in: ^6.2.1
   googleapis: ^11.0.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.0
-
+  collection:
+  fl_chart: ^0.68.0
+  firebase_messaging:
 
 
 

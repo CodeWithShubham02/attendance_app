@@ -22,6 +22,7 @@ class UserModel {
   final String shiftStart;
   final String shiftEnd;
   final String dateOfJoining;
+  final String lastworkingdate;
   final String status;
   final String role;
   final String createdAt;
@@ -51,6 +52,7 @@ class UserModel {
     required this.shiftStart,
     required this.shiftEnd,
     required this.dateOfJoining,
+    required this.lastworkingdate,
     required this.status,
     required this.role,
     required this.createdAt,
@@ -81,6 +83,7 @@ class UserModel {
       "shiftStart": shiftStart,
       "shiftEnd": shiftEnd,
       "dateOfJoining": dateOfJoining,
+      "lastworkingdate": lastworkingdate,
       "status": status,
       "role": role,
       "createdAt": createdAt,
@@ -93,25 +96,32 @@ class UserModel {
       cid: json['cid'] ?? '',
       userid: json['userid'] ?? '',
       password: json['password'] ?? '',
-      userToken: json['user_token'] ?? '',
-      userImg: json['user_img'] ?? '',
-      imeiNo: json['imei_no'] ?? '',
-      fullName: json['full_name'] ?? '',
-      userEmail: json['user_email'] ?? '',
-      userPhone: json['user_phone'] ?? '',
+
+      userToken: json['userToken'] ?? json['user_token'] ?? '',
+      userImg: json['userImg'] ?? json['user_img'] ?? '',
+      imeiNo: json['imeiNo'] ?? json['imei_no'] ?? '',
+
+      fullName: json['fullName'] ?? json['full_name'] ?? '', // ✅ BOTH
+      userEmail: json['userEmail'] ?? json['user_email'] ?? '',
+      userPhone: json['userPhone'] ?? json['user_phone'] ?? '',
       gender: json['gender'] ?? '',
-      fullAddress: json['full_address'] ?? '',
-      branchId: json['branch_id'] ?? '',
-      branchName: json['branch_name'] ?? '',
-      branchDistance: json['branch_distance'] ?? '',
-      branchLat: json['branch_lat'] ?? '',
-      branchLong: json['branch_long'] ?? '',
-      departmentId: json['department_id'] ?? '',
-      departmentName: json['department_name'] ?? '',
-      shiftId: json['shift_id'] ?? '',
-      shiftStart: json['shift_start'] ?? '',
-      shiftEnd: json['shift_end'] ?? '',
-      dateOfJoining: json['date_of_joining'] ?? '',
+      fullAddress: json['fullAddress'] ?? json['full_address'] ?? '',
+
+      branchId: json['branchId'] ?? json['branch_id'] ?? '',
+      branchName: json['branchName'] ?? json['branch_name'] ?? '', // ✅ BOTH
+      branchDistance: json['branchDistance'] ?? json['branch_distance'] ?? '',
+      branchLat: json['branchLat'] ?? json['branch_lat'] ?? '',
+      branchLong: json['branchLong'] ?? json['branch_long'] ?? '',
+
+      departmentId: json['departmentId'] ?? json['department_id'] ?? '',
+      departmentName: json['departmentName'] ?? json['department_name'] ?? '',
+
+      shiftId: json['shiftId'] ?? json['shift_id'] ?? '',
+      shiftStart: json['shiftStart'] ?? json['shift_start'] ?? '', // ✅ BOTH
+      shiftEnd: json['shiftEnd'] ?? json['shift_end'] ?? '',
+
+      dateOfJoining: json['dateOfJoining'] ?? json['date_of_joining'] ?? '',
+      lastworkingdate: json['last_working_date'] ?? json['last_working_date'] ?? '',
       status: json['status'] ?? '',
       role: json['role'] ?? '',
       createdAt: json['createdAt'] ?? '',

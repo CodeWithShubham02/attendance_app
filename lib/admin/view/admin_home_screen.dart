@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:joizone/admin/view/add_user_screen.dart';
@@ -54,8 +55,267 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void initState() {
     super.initState();
     loadUsers();
+    fetchAttendance();
+    fetchUsers();
+    fetchTodayReport();
   }
+  //---chart
+  String formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+  int presentCount = 0;
+  int absentCount = 0;
 
+  int maleCount = 0;
+  int femaleCount = 0;
+
+  int reportFilled = 0;
+  int reportNotFilled = 0;
+  List reportList = [];
+
+  Future<void> fetchAttendance() async {
+    final response = await http.post(
+      Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_date.php"),
+      body: {
+        "cid": widget.cid,
+        "date": formatDate(DateTime.now()), // 🔥 dynamic date
+      },
+    );
+
+    final data = jsonDecode(response.body);
+
+    int present = 0;
+    int absent = 0;
+
+    // 🔥 handle list response (most APIs return list)
+    if (data['data'] != null) {
+      for (var item in data['data']) {
+        if (item['status'] == "Present") {
+          present++;
+        } else {
+          absent++;
+        }
+      }
+    }
+
+    setState(() {
+      presentCount = present;
+      absentCount = absent;
+    });
+  }
+  Future<void> fetchUsers() async {
+    final response = await http.get(
+      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_users.php"),
+    );
+
+    final data = jsonDecode(response.body);
+
+    int male = 0;
+    int female = 0;
+
+    for (var user in data['data']) {
+      if ((user['gender'] ?? "").toString().toLowerCase() == "male") {
+        male++;
+      } else if ((user['gender'] ?? "").toString().toLowerCase() == "female") {
+        female++;
+      }
+    }
+
+    setState(() {
+      maleCount = male;
+      femaleCount = female;
+    });
+  }
+  Future<void> fetchTodayReport() async {
+    final response = await http.post(
+      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_report.php"),
+      body: {
+        "cid": widget.cid,
+        "date": formatDate(DateTime.now()),
+      },
+    );
+
+    final data = jsonDecode(response.body);
+
+    int filled = 0;
+    int notFilled = 0;
+    List tempList = [];
+
+    if (data['data'] != null) {
+      for (var item in data['data']) {
+
+        // 👉 full list store karo
+        tempList.add(item);
+
+        // 👉 existing logic (optional)
+        if (item['duplicate_from'] == "yes" || item['duplicate_from'] == "no") {
+          filled++;
+        } else {
+          notFilled++;
+        }
+      }
+    }
+
+    setState(() {
+      reportFilled = filled;
+      reportNotFilled = notFilled;
+
+      // 🔥 THIS IS IMPORTANT
+      reportList = tempList;
+    });
+  }
+  Widget attendanceChart() {
+    int total = presentCount + absentCount;
+
+    return Card(
+      elevation: 4,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text("Today's Attendance"),
+          ),
+          SizedBox(
+            height: 180,
+            child: total == 0
+                ? const Center(child: Text("No Data"))
+                : PieChart(
+              PieChartData(
+                sections: [
+                  PieChartSectionData(
+                    color: Colors.red,
+                    // value: presentCount.toDouble(),
+                    // title:
+                    // "Absent\n${((presentCount / total) * 100).toStringAsFixed(1)}%",
+                  ),
+                  PieChartSectionData(
+                    //value: absentCount.toDouble(),
+                     color: Colors.green,
+                    // title:
+                    // "Present\n${((absentCount / total) * 100).toStringAsFixed(1)}%",
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Text("Total Today Present Users : $total"),
+        ],
+      ),
+    );
+  }
+  Widget userChart() {
+    int total = maleCount + femaleCount;
+
+    return Card(
+      elevation: 4,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text("Employee Ratio"),
+          ),
+          SizedBox(
+            height: 180,
+            child: total == 0
+                ? const Center(child: Text("No Data"))
+                : PieChart(
+              PieChartData(
+                sections: [
+                  PieChartSectionData(
+                    color: Colors.blue,
+                    value: maleCount.toDouble(),
+                    title:
+                    "Male\n${((maleCount / total) * 100).toStringAsFixed(1)}%",
+                  ),
+                  PieChartSectionData(
+                    color: Colors.pink,
+                    value: femaleCount.toDouble(),
+                    title:
+                    "Female\n${((femaleCount / total) * 100).toStringAsFixed(1)}%",
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Text("Total Users: $total"),
+        ],
+      ),
+    );
+  }
+  Map<String, int> getKioskCounts(List reports) {
+    Map<String, int> kioskCount = {};
+
+    for (var item in reports) {
+      String kiosk = item['kiosk_name'] ?? 'Unknown';
+
+      if (kioskCount.containsKey(kiosk)) {
+        kioskCount[kiosk] = kioskCount[kiosk]! + 1;
+      } else {
+        kioskCount[kiosk] = 1;
+      }
+    }
+
+    return kioskCount;
+  }
+  List<PieChartSectionData> getSections(Map<String, int> data) {
+    int total = data.values.fold(0, (sum, val) => sum + val);
+
+    List<Color> colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+    ];
+
+    int i = 0;
+
+    return data.entries.map((entry) {
+      final percent = (entry.value / total) * 100;
+
+      final section = PieChartSectionData(
+        color: colors[i % colors.length],
+        value: entry.value.toDouble(),
+        title: "${entry.key}\n${entry.value}",
+        radius: 60,
+        titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
+      );
+
+      i++;
+      return section;
+    }).toList();
+  }
+  Widget reportChart(List reports) {
+    final kioskData = getKioskCounts(reports);
+    final total = kioskData.values.fold(0, (sum, val) => sum + val);
+
+    return Card(
+      elevation: 4,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text("Kiosk Wise Reports"),
+          ),
+          SizedBox(
+            height: 220,
+            child: total == 0
+                ? const Center(child: Text("No Data"))
+                : PieChart(
+              PieChartData(
+                sections: getSections(kioskData),
+                sectionsSpace: 2,
+                centerSpaceRadius: 30,
+              ),
+            ),
+          ),
+          Text("Total Today Reports: $total"),
+        ],
+      ),
+    );
+  }
+  //----
   Future<void> loadUsers() async {
     final fetchedUsers = await controller.fetchUsers();
     setState(() {
@@ -69,13 +329,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
+        iconTheme: IconThemeData(
+          color: Colors.white
+        ),
         title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 18,),),
 
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout,color: Colors.white,),
-            onPressed: () => logout(context),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>AddBranchScreen(cid:widget.cid));
+          }, child: Text("Kiosk Master")),
+          SizedBox(
+            width: 10,
           ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>ShiftScreen(cid:widget.cid));
+          }, child: Text("Shift Master")),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>DepartmentScreen(cid: widget.cid));
+          }, child: Text("Designation")),
           IconButton(
             icon: const Icon(Icons.refresh_outlined,color: Colors.white,),
             onPressed: () async {
@@ -115,95 +389,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.location_on,color: Colors.white,),
-            onPressed: () {
-              final parentContext = context;
-
-              showDialog(
-                context: context,
-                builder: (dialogContext) {
-                  TextEditingController attendanceController =
-                  TextEditingController();
-
-                  return AlertDialog(
-                    title: const Text("Real Time Location Tracking"),
-                    content: Column(
-                      children: [
-                        const Text(
-                          "Select User",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 10),
-
-                        /// 🔽 Dropdown
-                        DropdownButtonFormField<UserModel>(
-                          value: selectedUser,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          ),
-                          hint: const Text("Choose User"),
-                          items: users.map((user) {
-                            return DropdownMenuItem<UserModel>(
-                              value: user,
-                              child: Text(
-                                "${user.uid} - ${user.fullName})",
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (UserModel? value) {
-                            setState(() {
-                              selectedUser = value;
-                            });
-
-                            // 🔹 Selected user id
-                            if (value != null) {
-                              debugPrint("Selected User ID: ${value.uid}");
-                            }
-                          },
-                        ),
 
 
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        child: const Text("Cancel"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          String attendanceId =
-                          selectedUser!.uid;
-                          if (attendanceId.isEmpty) return;
-                          Navigator.pop(dialogContext); // close dialog
-                          final data =
-                          await AttendanceLocationService
-                              .fetchByAttendanceId(attendanceId);
-
-                          if (!parentContext.mounted) return;
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AttendanceRouteMapScreen(
-                                data: data, // full list
-                              ),
-                            ),
-                          );
-
-                        },
-                        child: const Text("Search"),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          )
 
         ],
       ),
@@ -212,143 +399,113 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Company ID: ${widget.cid}",
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Company ID: ${widget.cid}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+                IconButton(onPressed: (){
+                  fetchAttendance();
+                  fetchTodayReport();
+                }, icon: Icon(Icons.refresh_outlined))
+              ],
             ),
             const SizedBox(height: 20),
+            Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: attendanceChart()),
+                    SizedBox(width: 10),
+                    Expanded(child: userChart()),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(child: reportChart(reportList)),
+                    SizedBox(width: 10),
+                    Expanded(child: SizedBox()),
+                  ],
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
 
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.8,
-                children: [
-
-                  _dashboardBox(
-                    title: "Daily Attendance",
-                    icon: Icons.fact_check,
-                    onTap: () {
-                      Get.to(()=>AllEmployeeAttendanceScreen(cid:widget.cid));
-                    },
-                  ),
-                  // _dashboardBox(
-                  //   title: "All Kiosk",
-                  //   icon: Icons.fact_check,
-                  //   onTap: () {
-                  //     Get.to(()=>BranchListScreen(cid: widget.cid));
-                  //   },
-                  // ),
-
-                  _dashboardBox(
-                    title: "Monthly Atten..",
-                    icon: Icons.fact_check,
-                    onTap: () {
-                      Get.to(()=>MonthlyAttendanceScreen(cid:widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Form Data",
-                    icon: Icons.data_exploration_outlined,
-                    onTap: () {
-                      Get.to(()=>AllFormReportScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Monthly Summary",
-                    icon: Icons.calendar_month,
-                    onTap: () {
-                      Get.to(()=>AttendanceSummaryScreen());
-                    },
-                  ),
-                  // _dashboardBox(
-                  //   title: "Holiday",
-                  //   icon: Icons.weekend_outlined,
-                  //   onTap: () {
-                  //     Get.to(()=>HolidayScreen());
-                  //   },
-                  // ),
-
-
-
-                  _dashboardBox(
-                    title: "Upload Remark",
-                    icon: Icons.person,
-                    onTap: () {
-                      Get.to(()=>UploadRemarkScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Location History",
-                    icon: Icons.location_on_rounded,
-                    onTap: () {
-                      Get.to(()=>LocationHistoryScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Active Users \n Map",
-                    icon: Icons.location_on_outlined,
-                    onTap: () {
-                      Get.to(()=>GoogleMapScreen(cid:widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Create Users",
-                    icon: Icons.person_add,
-                    onTap: () {
-                      Get.to(()=>AddUserScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "All Users",
-                    icon: Icons.people,
-                    onTap: () {
-                      Get.to(()=>UsersTableScreen ());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Roster",
-                    icon: Icons.weekend_outlined,
-                    onTap: () {
-                      Get.to(()=>AssignHolidayScreen());
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "Create Kiosk",
-                    icon: Icons.account_tree,
-                    onTap: () {
-                      Get.to(()=>AddBranchScreen(cid:widget.cid));
-                    },
-                  ),
-
-                  _dashboardBox(
-                    title: "Create Shift",
-                    icon: Icons.schedule,
-                    onTap: () {
-                      Get.to(()=>ShiftScreen(cid:widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "User Type.",
-                    icon: Icons.fact_check,
-                    onTap: () {
-                      Get.to(()=>DepartmentScreen(cid: widget.cid));
-                    },
-                  ),
-                  _dashboardBox(
-                    title: "User Attendance",
-                    icon: Icons.person,
-                    onTap: () {
-                      Get.to(()=>UserAttendanceDetailScreen());
-                    },
-                  ),
-
-                ],
+            // 🔵 HEADER
+            UserAccountsDrawerHeader(
+              accountName: Text("Joizone"),
+              accountEmail: Text("joizone@gmail.com "),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 40),
               ),
+            ),
+
+            // 🟢 PROFILE
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text("Profile"),
+              onTap: () {
+                Get.back();
+                Get.to(() => UsersTableScreen()); // change to ProfileScreen if you have
+              },
+            ),
+
+            // 🟢 ATTENDANCE
+            ListTile(
+              leading: Icon(Icons.calendar_today),
+              title: Text("Attendance"),
+              onTap: () {
+                Get.back();
+                Get.to(() => AllEmployeeAttendanceScreen(cid: widget.cid));
+              },
+            ),
+            // 🟢 LOCATION CAPTURING
+            ListTile(
+              leading: Icon(Icons.file_copy),
+              title: Text("Form"),
+              onTap: () {
+                Get.back();
+                Get.to(()=>AllFormReportScreen());
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.file_copy),
+              title: Text("Upload Remark"),
+              onTap: () {
+                Get.back();
+                Get.to(()=>UploadRemarkScreen());
+              },
+            ),
+
+            // 🟢 LOCATION REPORT
+            ListTile(
+              leading: Icon(Icons.map),
+              title: Text("Real Time Location"),
+              onTap: () {
+                Get.back();
+                Get.to(()=>LocationHistoryScreen(cid: widget.cid,));
+              },
+            ),
+
+            const Divider(),
+
+            // 🔴 LOGOUT
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.red),
+              title: Text("Logout"),
+              onTap: () => logout(context),
             ),
           ],
         ),
@@ -356,52 +513,5 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  Widget _dashboardBox({
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(
-            color: Colors.blue, // 🔥 Border color
-            width: 1.5,
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 30, color: Colors.blue),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 }

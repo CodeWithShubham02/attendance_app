@@ -56,23 +56,93 @@ class _EditBranchScreenState extends State<EditBranchScreen> {
       appBar: AppBar(
           backgroundColor: Colors.blue,
           iconTheme: IconThemeData(color: Colors.white),
-          title: const Text("Edit Branch",style: TextStyle(color: Colors.white,fontSize: 18),)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Branch Name")),
-            TextField(controller: distCtrl, decoration: const InputDecoration(labelText: "Distance")),
-            TextField(controller: latCtrl, decoration: const InputDecoration(labelText: "Latitude")),
-            TextField(controller: longCtrl, decoration: const InputDecoration(labelText: "Longitude")),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isLoading ? null : update,
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Update"),
-            ),
-          ],
+          title: const Text("Edit Kiosk",style: TextStyle(color: Colors.white,fontSize: 18),)),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+        
+              // 🔹 Row 1 → Kiosk Name + Distance
+              Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: "Kiosk Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: distCtrl,
+                        decoration: const InputDecoration(
+                          labelText: "Distance",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+        
+              // 🔹 Row 2 → Latitude + Longitude
+              Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: latCtrl,
+                        decoration: const InputDecoration(
+                          labelText: "Latitude",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: longCtrl,
+                        decoration: const InputDecoration(
+                          labelText: "Longitude",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+        
+              const SizedBox(height: 20),
+        
+              // 🔹 Update Button
+              ElevatedButton(
+                onPressed: isLoading ? null : update,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                    : const Text("Update"),
+              ),
+            ],
+          ),
         ),
       ),
     );

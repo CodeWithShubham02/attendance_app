@@ -68,7 +68,17 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
   }
 
   final excel = Excel.createExcel();
-  final sheet = excel['Attendance Summary'];
+
+  // Create your sheet FIRST
+  final Sheet sheet = excel['Attendance_Summary'];
+
+// Then delete all other sheets
+    for (var sheetName in List.from(excel.tables.keys)) {
+      if (sheetName != 'Attendance_Summary') {
+        excel.delete(sheetName);
+      }
+    }
+
 
   // 🟢 HEADER ROW (same as DataTable)
   sheet.appendRow([
@@ -84,9 +94,10 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
     TextCellValue("Total Outside Kiosk"),
     TextCellValue("Total WO"),
     TextCellValue("Missed Punch"),
-    TextCellValue("Total Late Marks"),
-    TextCellValue("Total Break Time"),
-    TextCellValue("Total Working Time"),
+    TextCellValue("Total Late"),
+    TextCellValue("Total HalfDay"),
+    TextCellValue("Total Break Time \n (HH:MM:SS)"),
+    TextCellValue("Total Working Time \n (HH:MM:SS)"),
     TextCellValue("From Date"),
     TextCellValue("To Date"),
   ]);
@@ -107,6 +118,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
       TextCellValue(r.totalHoliday.toString()),
       TextCellValue(r.missedPunchOut.toString()),
       TextCellValue(r.totalLate.toString()),
+      TextCellValue(r.totalHalfDay.toString()),
       TextCellValue(r.total_break_minutes.toString()),
       TextCellValue(r.totalTimeFormate.toString()),
       TextCellValue(r.fromDate),
@@ -372,6 +384,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                       DataColumn(label: Text("Total WO")),
                       DataColumn(label: Text("Missed Punch")),
                       DataColumn(label: Text("Total Late Marks")),
+                      DataColumn(label: Text("Total HalfDay Marks")),
                       DataColumn(label: Text("Total Break Time \n  (HH:MM:SS)")),
                       DataColumn(label: Text("Total Working Time \n  (HH:MM:SS)")),
                       //DataColumn(label: Text("Total Hours")),
@@ -394,6 +407,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                           DataCell(Text(r.totalHoliday.toString())),
                           DataCell(Text(r.missedPunchOut.toString())),
                           DataCell(Text(r.totalLate.toString())),
+                          DataCell(Text(r.totalHalfDay.toString())),
                           DataCell(Text(r.total_break_minutes.toString())),
                           DataCell(Text(r.totalTimeFormate.toString())),
                           //DataCell(Text(r.totalHour.toString())),

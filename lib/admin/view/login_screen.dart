@@ -22,7 +22,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String selectedRole = 'user';
+  String selectedRole = 'admin';
   final UserController userController=UserController();
   final TextEditingController userIdCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
@@ -35,16 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-      checkLogin();
-    // googleSignIn = GoogleSignIn(
-    //   clientId: "joizone.apps.googleusercontent.com",
-    //   scopes: [
-    //     'email',
-    //     'https://www.googleapis.com/auth/drive.readonly',
-    //   ],
-    // );
-
-
+    checkLogin1();
   }
 
 
@@ -80,46 +71,47 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       UserModel userModel=UserModel(
-          uid: data['uid'],
-          cid: data['cid'],
-          userid: data['userid'],
-          password: data['userPassword'],
-          userToken: data['user_token'],
-          userImg: data['userImg'],
-          imeiNo: data['imei_no'],
-          fullName: data['userName'],
-          userEmail: data['userEmail'],
-          userPhone: data['userPhone'],
-          gender: data['userGender'],
-          fullAddress: data['full_address'],
-          branchId: data['storeId'],
-          branchName: data['storeName'],
-          branchDistance: data['storeDistance'],
-          branchLat: data['storeLat'],
-          branchLong: data['storeLong'],
-          departmentId: data['department_id'],
-          departmentName: data['department_name'],
-          shiftId: data['shift_id'],
-          shiftStart: data['shift_start'],
-          shiftEnd: data['shift_end'],
-          dateOfJoining: data['date_of_joining'],
-          status: data['status'],
-          role: data['role'],
-          createdAt: data['createdAt'],
-          updatedAt: data['updatedAt'],);
+        uid: data['uid'],
+        cid: data['cid'],
+        userid: data['userid'],
+        password: data['userPassword'],
+        userToken: data['user_token'],
+        userImg: data['userImg'] ?? '',  // ✅ FIX
+        imeiNo: data['imei_no'] ?? '',
+        fullName: data['userName'],
+        userEmail: data['userEmail'],
+        userPhone: data['userPhone'],
+        gender: data['userGender'],
+        fullAddress: data['full_address'],
+        branchId: data['storeId'],
+        branchName: data['storeName'],
+        branchDistance: data['storeDistance'],
+        branchLat: data['storeLat'],
+        branchLong: data['storeLong'],
+        departmentId: data['department_id'],
+        departmentName: data['department_name'],
+        shiftId: data['shift_id'],
+        shiftStart: data['shift_start'],
+        shiftEnd: data['shift_end'],
+        dateOfJoining: data['date_of_joining'],
+        lastworkingdate: data['last_working_date'] ?? '',
+        status: data['status'],
+        role: data['role'],
+        createdAt: data['createdAt'],
+        updatedAt: data['updatedAt'],);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('uid', data['uid'].toString());
       await prefs.setString('branchLat',userModel.branchLat);
       await prefs.setString('branchLong',userModel.branchLong);
       await prefs.setString('role', 'user');
       final userJson = jsonEncode(userModel.toJson());
-      print("------------------------------");
+      print("-----------------fgf-------------");
       print(userJson);
       print(userModel);
-      print("------------------------------");
+      print("----------------fg--------------");
       await prefs.setString('user_model', userJson);
       // Navigate to your home screen
-       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmployeeHomeScreen(userModel: userModel,)));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmployeeHomeScreen(userModel: userModel,)));
     } else {
       // Login failed
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,80 +119,123 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
-  Future<void> checkLogin() async {
+  Future<UserModel?> getSavedUser() async {
     final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user_model');
 
-    String? uid = prefs.getString('uid');
-    String? attendanceId =await  prefs.getString('attendance_id');
-    String? userData =prefs.getString('user_model');
-
-    print("UID: $uid");
-    print("Attendance ID: $attendanceId");
-    print("UserData: $userData");
-
-    /// ✅ CASE 1: VALID LOGIN
-    if (attendanceId != null &&
-        attendanceId.isNotEmpty &&
-        userData != null &&
-        userData.isNotEmpty) {
-      try {
-        Map<String, dynamic> json = jsonDecode(userData);
-        UserModel userModel = UserModel.fromJson(json);
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmployeeHomeScreen(userModel: userModel),
-          ),
-        );
-        return;
-
-      } catch (e) {
-        print("User model decode error: $e");
-      }
+    if (userString != null) {
+      final json = jsonDecode(userString);
+      return UserModel.fromJson(json);
     }
-
-    /// ❌ CASE 2: INVALID / LOGOUT → GO TO LOGIN
-    if (!mounted) return;
-
-    return;
+    return null;
   }
-  Future<void> connectDriveAndSave(String uid) async {
+  Future<bool> isAttendanceActive(String attendanceId) async {
     try {
-      final googleSignIn = GoogleSignIn(
-        clientId: "joizone.apps.googleusercontent.com",
-        scopes: [
-          'email',
-          'https://www.googleapis.com/auth/drive.readonly',
-        ],
+      final response = await http.post(
+        Uri.parse("https://fms.bizipac.com/apinew/attendance/check_status.php"),
+        body: {
+          "attendance_id": attendanceId,
+        },
       );
 
-      final account = await googleSignIn.signIn(); // works only on click
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-      if (account == null) {
-        print("User cancelled");
-        return;
+        /// Expected response:
+        /// { "status": "active" } OR { "status": "closed" }
+
+        return data["attendance_status"] == "active";
       }
-
-      final authClient = await googleSignIn.authenticatedClient();
-      if (authClient == null) return;
-
-      final driveApi = drive.DriveApi(authClient);
-
-      final about = await driveApi.about.get($fields: "user");
-
-      await FirebaseFirestore.instance.collection("userDrive").add({
-        "uid": uid,
-        "email": about.user?.emailAddress,
-        "drive_link": "https://drive.google.com/drive/my-drive",
-      });
-
     } catch (e) {
-      print("Error: $e");
+      print("Error checking attendance: $e");
     }
+
+    return false;
   }
+  Future<void> checkLogin1() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? attendanceId = prefs.getString('attendance_id');
+
+    /// 🔥 Get cached user
+    UserModel? userModel = await getSavedUser();
+
+    print("Attendance ID: $attendanceId");
+    print("UserModel: $userModel");
+
+    /// ❌ If no user → stay on login (DO NOTHING)
+    if (userModel == null) return;
+
+    /// ✅ If attendance active → Dashboard
+    if (attendanceId != null && attendanceId.isNotEmpty) {
+      bool isActive = await isAttendanceActive(attendanceId);
+      print("---------------");
+      print(isActive);
+      print("---------------");
+      if (!isActive) {
+        /// 🔥 REMOVE OLD attendance_id
+        await prefs.remove('attendance_id');
+
+        print("❌ Old attendance removed");
+
+        return; // stay on login
+      }
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmployeeHomeScreen(userModel: userModel),
+        ),
+      );
+    }
+
+    /// ❌ If attendance not found → stay on login
+  }
+
+  // Future<void> checkLogin() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //
+  //   String? uid = prefs.getString('uid');
+  //   String? attendanceId =await  prefs.getString('attendance_id');
+  //   String? userData =prefs.getString('user_model');
+  //
+  //   print("UID: $uid");
+  //   print("Attendance ID: $attendanceId");
+  //   print("UserData: $userData");
+  //
+  //   /// ✅ CASE 1: VALID LOGIN
+  //   if (attendanceId != null &&
+  //       attendanceId.isNotEmpty &&
+  //       userData != null &&
+  //       userData.isNotEmpty) {
+  //     try {
+  //       Map<String, dynamic> json = jsonDecode(userData);
+  //       UserModel userModel = UserModel.fromJson(json);
+  //
+  //       if (!mounted) return;
+  //
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (_) => EmployeeHomeScreen(userModel: userModel),
+  //         ),
+  //       );
+  //       return;
+  //
+  //     } catch (e) {
+  //       print("User model decode error: $e");
+  //     }
+  //   }
+  //
+  //   /// ❌ CASE 2: INVALID / LOGOUT → GO TO LOGIN
+  //   if (!mounted) return;
+  //
+  //   return;
+  // }
+
+
+
   Future<void> loginAdmin() async {
     //await connectDriveAndSave("123");
     setState(() => isLoading = true);
@@ -267,37 +302,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
             /// ADMIN FIELDS
             if (selectedRole == 'admin') ...[
-              TextField(
-                controller: userIdCtrl,
-                decoration: InputDecoration(
-                  labelText: "Admin User ID",
-                  hint: Text("Enter the admin id"),
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: passwordCtrl,
-                obscureText: _obscureText,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  prefixIcon: const Icon(Icons.lock),
-                  hint: Text("Enter the password"),
-                  // 🔹 Show / Hide Icon
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility : Icons.visibility_off,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: userIdCtrl,
+                      decoration: InputDecoration(
+                        labelText: "Admin User ID",
+                        hintText: "Enter the admin id",
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
                   ),
-                  border: OutlineInputBorder(),
-                ),
+
+                  const SizedBox(width: 12), // spacing between fields
+
+                  Expanded(
+                    child: TextField(
+                      controller: passwordCtrl,
+                      obscureText: _obscureText,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        hintText: "Enter the password",
+                        prefixIcon: const Icon(Icons.lock),
+
+                        // 🔹 Show / Hide Icon
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureText ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureText = !_obscureText;
+                            });
+                          },
+                        ),
+
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
             if(selectedRole=='user')...[
@@ -356,7 +402,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
-    ),
+              ),
               child: isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : Text("Login"),

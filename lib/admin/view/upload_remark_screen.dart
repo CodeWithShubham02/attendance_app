@@ -94,36 +94,133 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
   }
   // PICK EXCEL FILE
   Future<void> pickExcelFile() async {
-
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx', 'xls'],
       withData: true,
     );
 
-    if (result != null) {
+    if (result == null) return;
 
-      var bytes = result.files.single.bytes;
+    var bytes = result.files.single.bytes;
+    var excel = Excel.decodeBytes(bytes!);
 
-      var excel = Excel.decodeBytes(bytes!);
+    excelData.clear();
 
+    // ✅ Check sheet exists
+    if (excel.tables.isEmpty) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Excel has no sheets ❌")),
+      );
+      return;
+    }
+
+    // ✅ Get first sheet
+    var sheet = excel.tables[excel.tables.keys.first];
+
+    if (sheet == null || sheet.rows.isEmpty) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Excel sheet is empty ❌")),
+      );
+      return;
+    }
+
+    // ✅ Read data
+    for (var row in sheet.rows) {
+      excelData.add(row.map((cell) => cell?.value ?? "").toList());
+    }
+
+    // ✅ Check empty
+    if (excelData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No data found ❌")),
+      );
+      return;
+    }
+
+    // ✅ EXPECTED HEADERS
+    List<String> expectedHeaders = [
+      "Report Id",
+      "User ID",
+      "User Name",
+      "City Name",
+      "Report Date",
+      "Report Time",
+      "Application Number",
+      "Relation",
+      "Variant",
+      "Status",
+      "Remarks",
+      "Manager Remarks",
+      "Snapshot",
+      "Contact No",
+      "Address",
+      "Kiosk Name",
+      "Bank Remark",
+      "RemarksDate",
+    ];
+
+    // ✅ Normalize function (ignore case + spaces)
+    String normalize(String s) =>
+        s.replaceAll(" ", "").toLowerCase();
+
+    List<String> fileHeaders =
+    excelData.first.map((e) => normalize(e.toString())).toList();
+
+    List<String> expected =
+    expectedHeaders.map((e) => normalize(e)).toList();
+
+    // ✅ Check missing & extra
+    List<String> missing = [];
+    List<String> extra = [];
+
+    for (var col in expected) {
+      if (!fileHeaders.contains(col)) missing.add(col);
+    }
+
+    for (var col in fileHeaders) {
+      if (!expected.contains(col)) extra.add(col);
+    }
+
+    // ❌ Invalid file
+    if (missing.isNotEmpty || extra.isNotEmpty) {
       excelData.clear();
 
-      for (var table in excel.tables.keys) {
-        for (var row in excel.tables[table]!.rows) {
+      String error = "";
 
-          List<dynamic> rowData = [];
-
-          for (var cell in row) {
-            rowData.add(cell?.value ?? "");
-          }
-
-          excelData.add(rowData);
-        }
+      if (missing.isNotEmpty) {
+        error += "Missing Columns:\n${missing.join(", ")}\n\n";
       }
 
-      setState(() {});
+      if (extra.isNotEmpty) {
+        error += "Extra Columns:\n${extra.join(", ")}";
+      }
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Invalid Excel ❌"),
+          content: Text(error),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+
+      return;
     }
+
+    // ✅ VALID FILE
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Valid Excel File ✅")),
+    );
+
+    setState(() {});
   }
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
@@ -135,58 +232,64 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
         iconTheme: IconThemeData(color: Colors.white),
         title: Text("Upload Remark",style: TextStyle(fontSize: 16,color: Colors.white),),
         actions: [
-          // IconButton(
-          //   onPressed: () {
-          //     pickExcelFile();
-          //   },
-          //   icon: const Icon(Icons.download,color: Colors.white,),
-          // ),
-          // IconButton(
-          //   onPressed: () {
-          //     uploadExcelData();
-          //   },
-          //   icon: const Icon(Icons.cloud_upload,color: Colors.white,),
-          // ),
-          IconButton(
+          ElevatedButton(
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text("Remarks Final Upload File"),
-                    content: const Text("-----------------------"),
-                    actions: [
-                      ElevatedButton(
-                        onPressed: () {
-                          pickExcelFile();
-                          Get.back();
-                        },
-                        child: Row(
-                          children: [
-                            Container(child: Text("Select Remark file")),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 40,
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          uploadExcelData();
-                        },
-                        child: Row(
-                          children: [
-                            Container(child: Text("Upload Remark file")),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
+              pickExcelFile();
             },
-            icon: const Icon(Icons.menu),
+            child: const Text("Select Remark file"),
           ),
+          const SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(
+            onPressed: () {
+              uploadExcelData();
+            },
+            child: const Text('Upload Remark file'),
+          ),
+          const SizedBox(
+            width: 10,
+          ),
+          // IconButton(
+          //   onPressed: () {
+          //     showDialog(
+          //       context: context,
+          //       builder: (context) {
+          //         return AlertDialog(
+          //           title: const Text("Remarks Final Upload File"),
+          //           content: const Text("-----------------------"),
+          //           actions: [
+          //             ElevatedButton(
+          //               onPressed: () {
+          //                 pickExcelFile();
+          //                 Get.back();
+          //               },
+          //               child: Row(
+          //                 children: [
+          //                   Container(child: Text("Select Remark file")),
+          //                 ],
+          //               ),
+          //             ),
+          //             const SizedBox(
+          //               height: 40,
+          //             ),
+          //             ElevatedButton(
+          //               onPressed: () {
+          //                 uploadExcelData();
+          //               },
+          //               child: Row(
+          //                 children: [
+          //                   Container(child: Text("Upload Remark file")),
+          //                 ],
+          //               ),
+          //             ),
+          //           ],
+          //         );
+          //       },
+          //     );
+          //   },
+          //   icon: const Icon(Icons.menu),
+          // ),
         ],
       ),
       body: excelData.isEmpty

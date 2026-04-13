@@ -89,19 +89,29 @@ class ReportController {
     required String duplicateFrom,
   }) async {
     try {
-      // Example API call using http
-      final response = await http.post(
+      final response = await http
+          .post(
         Uri.parse("https://fms.bizipac.com/apinew/attendance/update_form.php"),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
         body: {
           "id": id.toString(),
-          "duplicate_from": duplicateFrom, // "yes"
+          "duplicate_from": duplicateFrom,
         },
-      );
+      )
+          .timeout(const Duration(seconds: 10));
+
+      print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['status'] == true;
+
+        if (data is Map && data.containsKey('status')) {
+          return data['status'] == true;
+        }
       }
+
       return false;
     } catch (e) {
       print("Error updating duplicate: $e");

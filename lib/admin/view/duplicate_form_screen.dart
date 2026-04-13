@@ -82,52 +82,54 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
       },
     );
   }
+
+
   Future<void> _confirmAndUpdateDuplicate(ClientFormReportModel report) async {
-    bool confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Mark as Duplicate?"),
-        content: const Text(
-            "Are you sure you want to ignore this form as duplicate?"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("No")),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes")),
-        ],
-      ),
-    ) ??
-        false;
+    bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Mark as Duplicate?"),
+            content: const Text(
+              "Are you sure you want to mark this form as duplicate?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("No"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Yes"),
+              ),
+            ],
+          ),
+        ) ??
+            false;
 
     if (!confirmed) return;
 
-    // Optional: show a loader/snackbar
+    // Loader message
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Ignored form...")),
+      const SnackBar(content: Text("Updating...")),
     );
 
-    // Call the API
     bool success = await ReportController.updateDuplicate(
       id: report.id,
-      duplicateFrom: "yes",
+      duplicateFrom: "no", // ✅ correct value
     );
 
     if (success) {
       setState(() {
-        report.duplicateFrom = "yes"; // update local table
+        reportsFuture = ReportController.fetchReportDuplicate(); // 🔥 refresh
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Form marked as duplicate")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to update form")),
+        const SnackBar(content: Text("Form updated successfully")),
       );
     }
   }
+
   DateTime? selectedDate;
   Future<void> _pickDateAndFetchReports() async {
     final DateTimeRange? pickedRange = await showDateRangePicker(
@@ -322,7 +324,7 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
                                   icon: const Icon(Icons.settings),
                                   onPressed: () {
                                     debugPrint(report.uid.toString());
-                                   // _confirmAndUpdateDuplicate(report);
+                                    _confirmAndUpdateDuplicate(report);
                                   },
                                 ),
                               ),

@@ -90,7 +90,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
           builder: (_) => AlertDialog(
             title: const Text("Mark as Duplicate?"),
             content: const Text(
-              "Are you sure you want to ignore this form as duplicate?",
+              "Are you sure you want to mark this form as duplicate?",
             ),
             actions: [
               TextButton(
@@ -104,33 +104,28 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
             ],
           ),
         ) ??
-        false;
+            false;
 
     if (!confirmed) return;
 
-    // Optional: show a loader/snackbar
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Ignored form...")));
+    // Loader message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Updating...")),
+    );
 
-    // Call the API
     bool success = await ReportController.updateDuplicate(
       id: report.id,
-      duplicateFrom: "yes",
+      duplicateFrom: "yes", // ✅ correct value
     );
 
     if (success) {
       setState(() {
-        report.duplicateFrom = "yes"; // update local table
+        reportsFuture = ReportController.fetchReports(); // 🔥 refresh
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Form marked as duplicate")));
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to update form")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Form updated successfully")),
+      );
     }
   }
 
@@ -200,8 +195,15 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
     List<ClientFormReportModel> reports,
   ) async {
     final Excel excel = Excel.createExcel();
+// Create your sheet FIRST
     final Sheet sheet = excel['Reports'];
 
+// Then delete all other sheets
+    for (var sheetName in List.from(excel.tables.keys)) {
+      if (sheetName != 'Reports') {
+        excel.delete(sheetName);
+      }
+    }
     // 🟢 HEADER ROW
     sheet.appendRow([
       TextCellValue("Report Id"),
@@ -236,7 +238,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         TextCellValue(row.userName),
         TextCellValue(row.cityName),
         TextCellValue(row.reportDate),
-        TextCellValue(row.reportTime),
+        TextCellValue(formatTime1(row.reportTime ?? "")),
         TextCellValue(row.applicationNo),
         TextCellValue(row.relation),
         TextCellValue(row.variant),
@@ -283,7 +285,15 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
     List<ClientFormReportModel> reports,
   ) async {
     final Excel excel = Excel.createExcel();
+    // Create your sheet FIRST
     final Sheet sheet = excel['Reports'];
+
+// Then delete all other sheets
+    for (var sheetName in List.from(excel.tables.keys)) {
+      if (sheetName != 'Reports') {
+        excel.delete(sheetName);
+      }
+    }
 
     // 🟢 HEADER ROW
     sheet.appendRow([
@@ -320,7 +330,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         TextCellValue(row.userName),
         TextCellValue(row.cityName),
         TextCellValue(row.reportDate),
-        TextCellValue(row.reportTime),
+        TextCellValue(formatTime1(row.reportTime ?? "")),
         TextCellValue(row.applicationNo),
         TextCellValue(row.relation),
         TextCellValue(row.variant),
@@ -338,7 +348,6 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         ),
       ]);
     }
-
     final List<int>? bytes = excel.encode();
     if (bytes == null) return;
 
@@ -362,7 +371,14 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
       ).showSnackBar(SnackBar(content: Text("Excel saved to $filePath")));
     }
   }
-
+  String formatTime1(String time) {
+    try {
+      final parsedTime = DateFormat("HH:mm:ss").parse(time);
+      return DateFormat("hh:mm a").format(parsedTime);
+    } catch (e) {
+      return time;
+    }
+  }
   void _showEditDialog(ClientFormReportModel report) {
     final applicationController = TextEditingController(
       text: report.applicationNo,
@@ -668,94 +684,113 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
         actions: [
-          // IconButton(
-          //   onPressed: () async {
-          //     final reports = await reportsFuture;
-          //     if (reports.isEmpty) {
-          //       ScaffoldMessenger.of(context).showSnackBar(
-          //         const SnackBar(content: Text("No reports to download")),
-          //       );
-          //       return;
-          //     }
-          //     await exportReportsToApprovedExcel(context, reports);
-          //   },
-          //   icon: const Icon(
-          //     Icons.download_for_offline_outlined,
-          //     color: Colors.white,
-          //   ),
-          // ),
-          // IconButton(
-          //   onPressed: () async {
-          //     final reports = await reportsFuture;
-          //     if (reports.isEmpty) {
-          //       ScaffoldMessenger.of(context).showSnackBar(
-          //         const SnackBar(content: Text("No reports to download")),
-          //       );
-          //       return;
-          //     }
-          //     await exportReportsToExcel(context, reports);
-          //   },
-          //   icon: const Icon(Icons.download, color: Colors.white),
-          // ),
+          ElevatedButton(onPressed: (){
+            Get.to(() => DuplicateFormScreen());
+          }, child: Text("Duplicate Form")),// Get.to(()=>ShiftScreen(cid:widget.cid));
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final reports = await reportsFuture;
+              if (reports.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("No reports to download"),
+                  ),
+                );
+                return;
+              }
+              await exportReportsToExcel(context, reports);
+            },
+            child: Row(
+              children: [
+                Container(child: Text("Download Template")),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final reports = await reportsFuture;
+              if (reports.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("No reports to download")),
+                );
+                return;
+              }
+              await exportReportsToApprovedExcel(context, reports);
+            },
+            child: Row(
+              children: [
+                Container(child: Text("Post/Final Download")),
+              ],
+            ),
+          ),
           IconButton(
             onPressed: _pickDateAndFetchReports,
             icon: Icon(Icons.calendar_month, color: Colors.white),
           ),
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text("Remark"),
-                    content: const Text("Download the template file and post update status file."),
-                    actions: [
-                      ElevatedButton(
-                        onPressed: () async {
-                          final reports = await reportsFuture;
-                          if (reports.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("No reports to download"),
-                              ),
-                            );
-                            return;
-                          }
-                          await exportReportsToExcel(context, reports);
-                        },
-                        child: Row(
-                          children: [
-                            Container(child: Text("Download Template")),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 40,
-                      ),
-                      ElevatedButton(
-                  onPressed: () async {
-                  final reports = await reportsFuture;
-                  if (reports.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("No reports to download")),
-                  );
-                  return;
-                  }
-                  await exportReportsToApprovedExcel(context, reports);
-                  },
-                        child: Row(
-                          children: [
-                            Container(child: Text("Post/Final Download")),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            icon: const Icon(Icons.menu),
+          SizedBox(
+            width: 10,
           ),
+          // IconButton(
+          //   onPressed: () {
+          //     showDialog(
+          //       context: context,
+          //       builder: (context) {
+          //         return AlertDialog(
+          //           title: const Text("Remark"),
+          //           content: const Text("Download the template file and post update status file."),
+          //           actions: [
+          //             ElevatedButton(
+          //               onPressed: () async {
+          //                 final reports = await reportsFuture;
+          //                 if (reports.isEmpty) {
+          //                   ScaffoldMessenger.of(context).showSnackBar(
+          //                     const SnackBar(
+          //                       content: Text("No reports to download"),
+          //                     ),
+          //                   );
+          //                   return;
+          //                 }
+          //                 await exportReportsToExcel(context, reports);
+          //               },
+          //               child: Row(
+          //                 children: [
+          //                   Container(child: Text("Download Template")),
+          //                 ],
+          //               ),
+          //             ),
+          //             const SizedBox(
+          //               height: 40,
+          //             ),
+          //             ElevatedButton(
+          //         onPressed: () async {
+          //         final reports = await reportsFuture;
+          //         if (reports.isEmpty) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //         const SnackBar(content: Text("No reports to download")),
+          //         );
+          //         return;
+          //         }
+          //         await exportReportsToApprovedExcel(context, reports);
+          //         },
+          //               child: Row(
+          //                 children: [
+          //                   Container(child: Text("Post/Final Download")),
+          //                 ],
+          //               ),
+          //             ),
+          //           ],
+          //         );
+          //       },
+          //     );
+          //   },
+          //   icon: const Icon(Icons.menu),
+          // ),
         ],
       ),
       body: FutureBuilder<List<ClientFormReportModel>>(
@@ -777,18 +812,14 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
 
           final reports = allReports.where((e) {
             bool cityMatch = selectedCity.isEmpty || e.cityName == selectedCity;
-
-            bool userMatch =
-                selectedUserName.isEmpty || e.userName == selectedUserName;
-
-            bool statusMatch =
-                selectedStatus.isEmpty || e.status == selectedStatus;
+            bool userMatch = selectedUserName.isEmpty || e.userName == selectedUserName;
+            bool statusMatch = selectedStatus.isEmpty || e.status == selectedStatus;
 
             return cityMatch && userMatch && statusMatch;
           }).toList();
 
           // 👉 PAGINATION LOGIC
-          final paginatedReports = allReports
+          final paginatedReports = reports
               .skip(currentPage * rowsPerPage)
               .take(rowsPerPage)
               .toList();
@@ -910,7 +941,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                     DataCell(Text(report.userName)),
                                     DataCell(Text(report.cityName)),
                                     DataCell(Text(report.reportDate)),
-                                    DataCell(Text(report.reportTime)),
+                                    DataCell(Text(formatTime1(report.reportTime))),
                                     DataCell(Text(report.applicationNo)),
                                     DataCell(Text(report.relation)),
                                     DataCell(Text(report.variant)),
@@ -1045,12 +1076,6 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Get.to(() => DuplicateFormScreen());
-        },
-        child: Icon(Icons.logout_outlined),
       ),
     );
   }

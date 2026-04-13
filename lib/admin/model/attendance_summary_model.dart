@@ -8,6 +8,7 @@ class AttendanceSummary {
   final int totalPresent;
   final int totalAbsent;
   final int totalLate;
+  final int totalHalfDay;
   final int totalHoliday;
   final int missedPunchOut;
   final double totalHour;
@@ -29,6 +30,7 @@ class AttendanceSummary {
     required this.totalPresent,
     required this.totalAbsent,
     required this.totalLate,
+    required this.totalHalfDay,
     required this.totalHoliday,
     required this.missedPunchOut,
     required this.totalHour,
@@ -67,6 +69,7 @@ class AttendanceSummary {
       totalPresent: _toInt(json['total_present']),
       totalAbsent: _toInt(json['total_absent']),
       totalLate: _toInt(json['total_late']),
+      totalHalfDay: _toInt(json['total_halfday']),
       totalHoliday: _toInt(json['total_holiday']),
       missedPunchOut: _toInt(json['missed_punchOut']),
       totalHour: _toDouble(json['total_hour']),

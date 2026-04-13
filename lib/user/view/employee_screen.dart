@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   bool internetDialogShown = false;
 
   /* ---------------- INIT ---------------- */
-
+  DateTime _currentTime = DateTime.now();
   @override
   void initState() {
     super.initState();
@@ -49,14 +50,24 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     startGpsMonitor();
     startInternetMonitor(); // 🔥 ADD THIS
     syncOfflinePunchOutIfAny();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _currentTime = DateTime.now();
+      });
+    });
   }
 
   @override
   void dispose() {
+    autoCloseTimer?.cancel();
     gpsTimer?.cancel();
     connectivitySub?.cancel();
     _timer?.cancel();
     super.dispose();
+    autoCloseTimer = null;
+    gpsTimer = null;
+    connectivitySub = null;
+    _timer = null;
   }
 
 
@@ -72,7 +83,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       if (!hasInternet && attendanceId != null) {
         // agar pehle se timer nahi chal raha
         if (internetOffTimer == null) {
-          internetOffTimer = Timer(const Duration(minutes: 3), () async {
+          internetOffTimer = Timer(const Duration(minutes: 4), () async {
             final stillNoInternet = await hasRealInternet();
 
             if (!stillNoInternet &&
@@ -93,7 +104,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                   builder: (_) => const AlertDialog(
                     title: Text("Internet Off"),
                     content: Text(
-                      "Internet was off for 2 minutes.\n"
+                      "Internet was off for 4 minutes.\n"
                           "You have been auto punched out.",
                     ),
                   ),
@@ -166,8 +177,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
     final res = await http.post(
       Uri.parse(
-        "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php"
-            "?attendance_id=$savedAttendanceId",
+        "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
       ),
       body: {
         "action": "punch_out",
@@ -186,69 +196,92 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       await prefs.remove("offline_lat");
       await prefs.remove("offline_lng");
       await prefs.remove("offline_time");
+
       await prefs.remove("attendance_id");
 
-      debugPrint("✅ Offline punch-out synced");
-// ❌ REMOVE attendance_id
-      await prefs.remove('attendance_id');
-      await prefs.remove('uid');
-      await prefs.remove('cid');
-
-      // 🛑 STOP SERVICE
       FlutterBackgroundService().invoke('stopService');
-      logout(context);
+
+      await stopLocationTracking();
+// 🔥 ADD NAVIGATION HERE ALSO
       if (mounted) {
-        Get.offAll(() => LoginScreen());
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+              (route) => false,
+        );
       }
+      debugPrint("✅ Offline punch-out synced");
     }
   }
 
   /* ---------------- AUTO PUNCH OUT ---------------- */
-
+  bool isAutoPunchingInternet = false;
   Future<void> autoPunchOutInternet(String reason) async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedAttendanceId = prefs.getString('attendance_id');
-    if (savedAttendanceId == null) return;
+    if (isAutoPunchingInternet) return;
 
-    final internet = await hasRealInternet();
+    isAutoPunchingInternet = true;
 
-    if (internet) {
-      try {
-        await http.post(
-          Uri.parse(
-            "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php"
-                "?attendance_id=$savedAttendanceId",
-          ),
-          body: {
-            "action": "punch_out",
-            "status": "Present",
-            "uid": widget.userModel.uid,
-            "cid": widget.userModel.cid,
-            "lat": currentPosition?.latitude.toString() ?? "0",
-            "lng": currentPosition?.longitude.toString() ?? "0",
-            "remark": reason,
-            "image": "NA",
-          },
-        );
-        // ❌ REMOVE attendance_id
-        await prefs.remove('attendance_id');
-        await prefs.remove('cid');
-        await prefs.remove('uid');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedAttendanceId = prefs.getString('attendance_id');
+      if (savedAttendanceId == null) return;
 
-        // 🛑 STOP SERVICE
-        FlutterBackgroundService().invoke('stopService');
-        logout(context);
-      } catch (_) {
+      final internet = await hasRealInternet();
+      bool success = false;
+
+      if (internet) {
+        try {
+          final response = await http.post(
+            Uri.parse(
+              "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
+            ),
+            body: {
+              "action": "punch_out",
+              "status": "Present",
+              "uid": widget.userModel.uid,
+              "cid": widget.userModel.cid,
+              "lat": currentPosition?.latitude.toString() ?? "0",
+              "lng": currentPosition?.longitude.toString() ?? "0",
+              "remark": reason,
+              "image": "NA",
+            },
+          );
+
+          final data = jsonDecode(response.body);
+
+          if (data['status'] == true) {
+            success = true;
+          } else {
+            await saveLocalPunchOut(reason);
+          }
+
+        } catch (_) {
+          await saveLocalPunchOut(reason);
+        }
+
+      } else {
         await saveLocalPunchOut(reason);
       }
-    } else {
-      await saveLocalPunchOut(reason);
-    }
 
-    await stopLocationTracking();
+      if (success) {
+        await prefs.remove('attendance_id');
 
-    if (mounted) {
-      setState(() => attendanceId = null);
+        FlutterBackgroundService().invoke('stopService');
+
+        await stopLocationTracking();
+
+        if (mounted) {
+          setState(() => attendanceId = null);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => LoginScreen()),
+                (route) => false,
+          );
+        }
+      }
+
+    } finally {
+      isAutoPunchingInternet = false;
     }
   }
 
@@ -303,7 +336,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => LoginScreen()),
@@ -311,29 +343,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     );
   }
 
-  /* ---------------- ATTENDANCE ID ---------------- */
-  //
-  // Future<void> loadAttendanceId() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //     attendanceId = prefs.getString('attendance_id');
-  //   });
-  // }
 
-  /* ---------------- LOCATION ---------------- */
-  /*----------------Logout------------------*/
-  // Future<void> logout(BuildContext context) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //
-  //   await prefs.clear();
-  //
-  //   Navigator.pushAndRemoveUntil(
-  //     context,
-  //     MaterialPageRoute(builder: (_) => LoginScreen()),
-  //         (route) => false,
-  //   );
-  // }
-  /*------------------------------------------*/
   Future<Position> getCurrentLocation() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw 'Location service disabled';
@@ -401,9 +411,13 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedAttendanceId = prefs.getString('attendance_id');
-      if (savedAttendanceId == null) return;
 
-      await http.post(
+      if (savedAttendanceId == null) {
+        debugPrint("⚠️ No attendance_id found");
+        return;
+      }
+
+      final response = await http.post(
         Uri.parse(
           "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
         ),
@@ -418,20 +432,35 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           "image": "NA",
         },
       );
-      await stopLocationTracking();
-      // ❌ REMOVE attendance_id
-      await prefs.remove('attendance_id');
 
-      // 🛑 STOP SERVICE
-      FlutterBackgroundService().invoke('stopService');
-      await prefs.remove('attendance_id'); // 2️⃣ remove local
-      await prefs.remove('cid'); // 2️⃣ remove local
-      await prefs.remove('uid'); // 2️⃣ remove local
-      setState(() => attendanceId = null);
-      debugPrint("✅ Auto punch out done");
-      logout(context);
+      final data = jsonDecode(response.body);
+      debugPrint("Response: $data");
+
+      if (data['status'] == true) {
+        // ✅ Stop location
+        await stopLocationTracking();
+
+        // ✅ Stop background service
+        FlutterBackgroundService().invoke('stopService');
+
+        // ✅ Clear only required data
+        await prefs.remove('attendance_id');
+
+        if (mounted) {
+          setState(() => attendanceId = null);
+        }
+
+        debugPrint("✅ Auto punch out success");
+
+        // ✅ Call logout only once
+        logout(context);
+
+      } else {
+        debugPrint("❌ Punch out failed: ${data['message']}");
+      }
+
     } catch (e) {
-      debugPrint("❌ Auto punch out failed: $e");
+      debugPrint("❌ Auto punch out error: $e");
     }
   }
 
@@ -468,20 +497,19 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
 
   /* ---------------- checkDistanceAndAutoPunchOut ---------------- */
+  bool isAutoPunching = false;
+
   Future<void> checkDistanceAndAutoPunchOut() async {
-    if (attendanceId == null) return;
+    if (attendanceId == null || isAutoPunching) return;
 
     try {
-      // Ensure current location available
       final pos = currentPosition ?? await getCurrentLocation();
 
-      // Branch details from userModel
       final double branchLat = double.parse(widget.userModel.branchLat);
       final double branchLng = double.parse(widget.userModel.branchLong);
       final double allowedRadius =
-      double.parse(widget.userModel.branchDistance); // in meters
+      double.parse(widget.userModel.branchDistance);
 
-      // Calculate distance
       final double distance = Geolocator.distanceBetween(
         pos.latitude,
         pos.longitude,
@@ -489,19 +517,21 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         branchLng,
       );
 
-      debugPrint("📍 Distance from Kiosk : ${distance.toStringAsFixed(2)} m");
+      debugPrint(
+        "📍 Distance: ${distance.toStringAsFixed(2)}m / Allowed: $allowedRadius",
+      );
 
-      // If user is OUTSIDE radius
-      if (distance > allowedRadius) {
+      /// 🔴 Outside radius (with buffer)
+      if (distance > (allowedRadius + 20)) {
+        isAutoPunching = true;
 
-        await autoPunchOut(
-          "You are outside Kiosk radius",
-        );
-        // await autoPunchOut(
-        //   "You are outside Kiosk radius (${distance.toStringAsFixed(0)}m)",
-        // );
-        Get.offAll(()=>LoginScreen());
+        await autoPunchOut("You are outside Kiosk radius");
+
+        if (mounted) {
+          Get.offAll(() => LoginScreen());
+        }
       }
+
     } catch (e) {
       debugPrint("❌ Distance check error: $e");
     }
@@ -634,65 +664,69 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String timeString =
+        '${_currentTime.hour.toString().padLeft(2, '0')}:'
+        '${_currentTime.minute.toString().padLeft(2, '0')}:'
+        '${_currentTime.second.toString().padLeft(2, '0')}';
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 22,fontFamily: 'impact'),),
         actions: [
           attendanceId == null
-          ? SizedBox.shrink()
-          : Row(
-    children: [
-           Switch(
-        value: isOnline,
-        activeColor: Colors.green,
-        onChanged: (value) async {
-          setState(() {
-            isOnline = value;
-          });
+              ? SizedBox.shrink()
+              : Row(
+            children: [
+              Switch(
+                value: isOnline,
+                activeColor: Colors.green,
+                onChanged: (value) async {
+                  setState(() {
+                    isOnline = value;
+                  });
 
-          if (isOnline) {
-            try {
-              var response = await startBreakApi(
-                attendanceId: attendanceId!,
-                uid: widget.userModel.uid,
+                  if (isOnline) {
+                    try {
+                      var response = await startBreakApi(
+                        attendanceId: attendanceId!,
+                        uid: widget.userModel.uid,
+                      );
+
+                      if (response['status'] == true) {
+
+                        breakStartTime =
+                            DateTime.parse(response['break_start_time']);
+
+                        _startTimer();       // ✅ only this timer
+                        _startBreakDialog(); // ✅ just open dialog
+
+                      } else {
+                        setState(() => isOnline = false);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(response['message'])),
+                        );
+                      }
+                    } catch (e) {
+                      setState(() => isOnline = false);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("API Error")),
+                      );
+                    }
+                  }
+                },
+              )
+            ],
+          ),
+          InkWell(
+            onTap: (){
+              showDialog(
+                context: context,
+                builder: (context) => UserIdCardDialog(user: widget.userModel),
               );
-
-              if (response['status'] == true) {
-
-                breakStartTime =
-                    DateTime.parse(response['break_start_time']);
-
-                _startTimer();       // ✅ only this timer
-                _startBreakDialog(); // ✅ just open dialog
-
-              } else {
-                setState(() => isOnline = false);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(response['message'])),
-                );
-              }
-            } catch (e) {
-              setState(() => isOnline = false);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("API Error")),
-              );
-            }
-          }
-        },
-      )
-             ],
-            ),
-           InkWell(
-             onTap: (){
-               showDialog(
-                 context: context,
-                 builder: (context) => UserIdCardDialog(user: widget.userModel),
-               );
-             },
-             child: CircleAvatar(
+            },
+            child: CircleAvatar(
               radius: 20,
               backgroundColor: Colors.grey.shade200,
               child: widget.userModel.userImg.isNotEmpty
@@ -724,8 +758,8 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                 size: 20,
                 color: Colors.grey,
               ),
-                       ),
-           ),
+            ),
+          ),
           attendanceId == null
               ?IconButton(
             icon: const Icon(Icons.logout,color: Colors.white,),
@@ -744,21 +778,152 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-      child: SizedBox(
-        height: 20,
-        child: Center(
-          child: Text(
-            "Version: 1.1.6",
-            style: TextStyle(fontSize: 14),
-          ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 👇 Time Row
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.center,
+            //   children: [
+            //     Text(
+            //       "Current Time : ".toUpperCase(),
+            //       style: const TextStyle(
+            //         fontSize: 10,
+            //         fontWeight: FontWeight.bold,
+            //         color: Colors.black87,
+            //       ),
+            //     ),
+            //     Text(
+            //       timeString,
+            //       style: const TextStyle(
+            //         fontSize: 10,
+            //         fontWeight: FontWeight.normal,
+            //         color: Colors.black87,
+            //       ),
+            //     ),
+            //     const SizedBox(width: 5),
+            //     Icon(Icons.access_time, size: 10, color: Colors.black),
+            //   ],
+            // ),
+
+            // 👇 Version Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Version : ",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  "1.0.3",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.normal,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Icon(
+                  Icons.verified_outlined,
+                  size: 10,
+                  color: Colors.black,
+                ),
+              ],
+            ),
+
+
+            const SizedBox(height: 10),
+
+            // 👇 Postpone Lead Button
+          ],
         ),
       ),
-    ),
     );
   }
 
   /* ---------------- DASHBOARD ---------------- */
+  Timer? autoCloseTimer;
+  int secondsLeft = 45;
+
+  void startAutoCloseTimer() {
+    autoCloseTimer?.cancel();
+    secondsLeft = 45;
+
+    late void Function(void Function()) updateDialog;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            updateDialog = setStateDialog; // 🔥 store reference
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              title: const Text(
+                "Please wait, redirecting shortly 🚀",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("You will be redirected in"),
+                  const SizedBox(height: 10),
+
+                  /// 🔥 Countdown Text
+                  Text(
+                    "$secondsLeft sec",
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  /// 🔥 Progress
+                  LinearProgressIndicator(
+                    value: secondsLeft / 45,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    /// ✅ TIMER
+    autoCloseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+
+      if (secondsLeft <= 0) {
+        timer.cancel();
+
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+
+        return;
+      }
+
+      secondsLeft--;
+
+      /// 🔥 UPDATE UI
+      updateDialog(() {});
+    });
+  }
 
   Widget dashboardGrid() {
     return GridView.count(
@@ -770,7 +935,15 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         dashboardBox(
           "Punch In / Out",
           Icons.fingerprint,
-              () => Get.to(() => PunchInOutScreen(userModel: widget.userModel)),
+              () async {
+            final result = await Get.to(
+                  () => PunchInOutScreen(userModel: widget.userModel),
+            );
+
+            if (result == true) {
+              startAutoCloseTimer(); // 🔥 show countdown
+            }
+          },
         ),
         dashboardBox(
           "My Attendance",
@@ -816,7 +989,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
       ],
     );
-    
+
   }
 
   Widget dashboardBox(

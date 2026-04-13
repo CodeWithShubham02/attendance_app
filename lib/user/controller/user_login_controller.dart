@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
@@ -34,13 +35,32 @@ class UserController {
       return "DEVICE_ERROR";
     }
   }
+  Future<String> getFcmToken() async {
+    try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
 
+      // Request permission (important for iOS)
+      await messaging.requestPermission();
+
+      String? token = await messaging.getToken();
+
+      debugPrint("FCM Token: $token");
+
+      return token ?? "NO_TOKEN";
+    } catch (e) {
+      debugPrint("FCM Error: $e");
+      return "TOKEN_ERROR";
+    }
+  }
   Future<Map<String, dynamic>> loginUser({
     required String userid,
     required String password,
   }) async {
     final imeiNo = await getDeviceId(); // fetch device ID
-
+    final fcmToken = await getFcmToken();
+    print("---------token--------------------");
+    print(fcmToken);
+    print("-----------------------------");
     final response = await http.post(
       Uri.parse("$baseUrl/user_login.php"),
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -48,6 +68,7 @@ class UserController {
         "userid": userid,
         "password": password,
         "imei_no": imeiNo,
+        "user_token":fcmToken,
       },
     );
 

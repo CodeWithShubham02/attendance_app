@@ -9,11 +9,14 @@ import '../model/location_history_model.dart';
 import '../model/user_model.dart';
 import 'package:http/http.dart' as http;
 
+import 'google_map_screen.dart';
 import 'location_history_map_screen.dart';
 
 
 class LocationHistoryScreen extends StatefulWidget {
-  const LocationHistoryScreen({super.key});
+  final String cid;
+  const LocationHistoryScreen({super.key,required this.cid
+  });
 
   @override
   State<LocationHistoryScreen> createState() => _LocationHistoryScreenState();
@@ -100,6 +103,14 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
           "Location History",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
+        actions: [
+          ElevatedButton(onPressed: (){
+            Get.to(()=>GoogleMapScreen(cid:widget.cid));
+          }, child: Text("Active User Map")),
+          SizedBox(
+            width: 10,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

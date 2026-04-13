@@ -35,6 +35,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
   List<Map<String, dynamic>> filteredRecords = [];
   void filterByName(String query) {
     setState(() {
+      currentPage = 0; // ✅ reset page
       filteredRecords = attendanceRecords.where((row) {
         final name = row['name']?.toString().toLowerCase() ?? '';
         return name.contains(query.toLowerCase());
@@ -51,8 +52,8 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
   Future<void> pickDateRange() async {
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2023),
-      lastDate: DateTime.now(),
+      firstDate: DateTime(2026),
+      lastDate: DateTime.now().add(Duration(days: 7)),
       saveText: "Submit",
       initialDateRange: selectedRange,
     );
@@ -67,7 +68,19 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
       fetchAttendance(); // yahi par call karo
     }
   }
+  //--------Pagination-----------
+  int currentPage = 0;
+  final int rowsPerPage = 10;
+  List<Map<String, dynamic>> get paginatedRecords {
+    final start = currentPage * rowsPerPage;
+    final end = start + rowsPerPage;
 
+    return filteredRecords.sublist(
+      start,
+      end > filteredRecords.length ? filteredRecords.length : end,
+    );
+  }
+  //---------------------------
   // ---------------- FETCH API ----------------
   Future<void> fetchAttendance() async {
     setState(() => isLoading = true);
@@ -137,7 +150,16 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
     }
 
     final excel = Excel.createExcel();
-    final sheet = excel['Attendance'];
+    // Create your sheet FIRST
+    final Sheet sheet = excel['Attendance'];
+
+// Then delete all other sheets
+    for (var sheetName in List.from(excel.tables.keys)) {
+      if (sheetName != 'Attendance') {
+        excel.delete(sheetName);
+      }
+    }
+
 
     // 🟢 HEADER ROW
     sheet.appendRow([
@@ -218,7 +240,11 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
         TextCellValue(row['name']?.toString() ?? ''),
         TextCellValue(row['department']?.toString() ?? ''),
         TextCellValue(row['office_name']?.toString() ?? ''),
-        TextCellValue(row['status']?.toString() ?? ''),
+        TextCellValue(
+          row['status']?.toString() == 'HOLYDAY'
+              ? 'WO'
+              : (row['status']?.toString() ?? ''),
+        ),
         TextCellValue(
           (() {
             final value = row['punch_in_time'];
@@ -352,9 +378,6 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
     }
   }
 
-
-
-
   Map<String, String> addressCache = {};
   Future<String> getAddressFromLatLng(double lat, double lng) async {
     final key = "$lat,$lng";
@@ -463,17 +486,18 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
   Set<String> selectedStatus = {};
   Set<String> selectedDepartment = {};
   Set<String> selectedOffice = {};
+
   void applyFilters() {
     setState(() {
+      currentPage = 0; // ✅ reset page
+
       filteredRecords = attendanceRecords.where((row) {
         final nameMatch = selectedName.isEmpty ||
             selectedName.contains(row['name']);
         final statusMatch = selectedStatus.isEmpty ||
             selectedStatus.contains(row['status']);
-
         final deptMatch = selectedDepartment.isEmpty ||
             selectedDepartment.contains(row['department']);
-
         final officeMatch = selectedOffice.isEmpty ||
             selectedOffice.contains(row['office_name']);
 
@@ -506,7 +530,9 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                 children: options.map((value) {
                   return CheckboxListTile(
                     value: selectedValues.contains(value),
-                    title: Text(value),
+                    title: Text(
+                      value == 'HOLYDAY' ? 'WO' : value,
+                    ),
                     onChanged: (checked) {
                       if (checked == true) {
                         selectedValues.add(value);
@@ -577,266 +603,366 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
             PointerDeviceKind.trackpad,
           },
         ),
-        child: Scrollbar(
-          controller: _horizontalController,
-          thumbVisibility: true,
-          trackVisibility: true,
-          interactive: true,
-          child: SingleChildScrollView(
-            controller: _horizontalController,
-            scrollDirection: Axis.horizontal,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints:
-              const BoxConstraints(minWidth: 2600), // 👈 VERY IMPORTANT
-              child: Scrollbar(
-                controller: _verticalController,
-                thumbVisibility: true,
-                trackVisibility: true,
-                interactive: true,
-                child: SingleChildScrollView(
-                  controller: _verticalController,
-                  scrollDirection: Axis.vertical,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: DataTable(
-                    headingRowColor:
-                    MaterialStateColor.resolveWith(
-                            (states) => Colors.grey.shade200),
-                    border: TableBorder.all(
-                        color: Colors.grey.shade400, width: 1),
-                    columnSpacing: 24,
-                    columns: [
-                      //DataColumn(label: Text("Attendance ID")),
-                      const DataColumn(label: Text("Date")),
-                      const DataColumn(label: Text("UID")),
-                      DataColumn(
-                        label: Row(
-                          children: [
-                            const Text("Name"),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, size: 18),
-                              onPressed: () {
-                                showFilterDialog(
-                                  title: "Name",
-                                  options: getUniqueValues('name'),
-                                  selectedValues: selectedName,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      DataColumn(
-                        label: Row(
-                          children: [
-                            const Text("User Type"),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, size: 18),
-                              onPressed: () {
-                                showFilterDialog(
-                                  title: "User Type",
-                                  options: getUniqueValues('department'),
-                                  selectedValues: selectedDepartment,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      DataColumn(
-                        label: Row(
-                          children: [
-                            const Text("Office Name"),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, size: 18),
-                              onPressed: () {
-                                showFilterDialog(
-                                  title: "Office",
-                                  options: getUniqueValues('office_name'),
-                                  selectedValues: selectedOffice,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      DataColumn(
-                        label: Row(
-                          children: [
-                            const Text("Status"),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list, size: 18),
-                              onPressed: () {
-                                showFilterDialog(
-                                  title: "Status",
-                                  options: getUniqueValues('status'),
-                                  selectedValues: selectedStatus,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const DataColumn(label: Text("Punch In Date")),
-                      const DataColumn(label: Text("Punch In Time")),
-                      const DataColumn(label: Text("Punch In Address")),
-                      const DataColumn(label: Text("Punch Out Date")),
-                      const DataColumn(label: Text("Punch Out Time")),
-                      const DataColumn(label: Text("Punch Out Address")),
-                      const DataColumn(label: Text("Shift Time")),
-                      const DataColumn(label: Text("Punch In Image")),
-                      const DataColumn(label: Text("Punch Out Image")),
-                      const DataColumn(label: Text("Punch In Remark")),
-                      const DataColumn(label: Text("Punch Out Remark")),
-                      //DataColumn(label: Text("Total Break")),
-                      const DataColumn(label: Text("Late Marks")),
-                      const DataColumn(label: Text("Total Working Minutes")),
+        child: Column(
+          children: [
 
-                    ],
-                    rows: filteredRecords.map((data) {
-                      DateTime? parse(dynamic v) {
-                        if (v == null) return null;
-                        try {
-                          return DateTime.parse(v.toString());
-                        } catch (_) {
-                          return null;
-                        }
-                      }
+            // ✅ TABLE AREA (SCROLLABLE)
+            Expanded(
+              child: ScrollConfiguration(
+                behavior: const ScrollBehavior().copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: Scrollbar(
+                  controller: _horizontalController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _horizontalController,
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 2600),
+                      child: Scrollbar(
+                        controller: _verticalController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _verticalController,
+                          child: DataTable(
+                              headingRowColor:
+                              MaterialStateColor.resolveWith(
+                                      (states) => Colors.grey.shade200),
+                              border: TableBorder.all(
+                                  color: Colors.grey.shade400, width: 1),
+                              columnSpacing: 24,
+                              columns: [
+                                //DataColumn(label: Text("Attendance ID")),
+                                const DataColumn(label: Text("Date")),
+                                const DataColumn(label: Text("UID")),
+                                DataColumn(
+                                  label: Row(
+                                    children: [
+                                      const Text("Name"),
+                                      IconButton(
+                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        onPressed: () {
+                                          showFilterDialog(
+                                            title: "Name",
+                                            options: getUniqueValues('name'),
+                                            selectedValues: selectedName,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Row(
+                                    children: [
+                                      const Text("User Type"),
+                                      IconButton(
+                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        onPressed: () {
+                                          showFilterDialog(
+                                            title: "User Type",
+                                            options: getUniqueValues('department'),
+                                            selectedValues: selectedDepartment,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Row(
+                                    children: [
+                                      const Text("Office Name"),
+                                      IconButton(
+                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        onPressed: () {
+                                          showFilterDialog(
+                                            title: "Office",
+                                            options: getUniqueValues('office_name'),
+                                            selectedValues: selectedOffice,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Row(
+                                    children: [
+                                      const Text("Status"),
+                                      IconButton(
+                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        onPressed: () {
+                                          showFilterDialog(
+                                            title: "Status",
+                                            options: getUniqueValues('status'),
+                                            selectedValues: selectedStatus,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const DataColumn(label: Text("Punch In Date")),
+                                const DataColumn(label: Text("Punch In Time")),
+                                const DataColumn(label: Text("Punch In Address")),
+                                const DataColumn(label: Text("Punch Out Date")),
+                                const DataColumn(label: Text("Punch Out Time")),
+                                const DataColumn(label: Text("Punch Out Address")),
+                                const DataColumn(label: Text("Shift Time")),
+                                const DataColumn(label: Text("Punch In Image")),
+                                const DataColumn(label: Text("Punch Out Image")),
+                                const DataColumn(label: Text("Punch In Remark")),
+                                const DataColumn(label: Text("Punch Out Remark")),
+                                //DataColumn(label: Text("Total Break")),
+                                const DataColumn(label: Text("Late Marks")),
+                                const DataColumn(label: Text("Total Working Minutes")),
 
-                      return DataRow(cells: [
-                        //DataCell(Text(data['id'] ?? '-')),
-                        DataCell(
-                          Text(
-                            safeParse(data['created_at']) != null
-                                ? DateFormat('dd-MM-yyyy')
-                                .format(safeParse(data['created_at'])!)
-                                : '-',
-                          ),
-                        ),
-                        DataCell(Text(data['uid'] ?? '-')),
-                        DataCell(Text(data['name'] ?? '-')),
-                        DataCell(Text(data['department'] ?? '-')),
-                        DataCell(Text(data['office_name'] ?? '-')),
-                        DataCell(Text(data['status'] ?? '-')),
-                        DataCell(
-                          Text(
-                            safeParse(data['punch_in_time']) != null
-                                ? DateFormat('dd-MM-yyyy')
-                                .format(safeParse(data['punch_in_time'])!)
-                                : '-',
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            safeParse(data['punch_in_time']) != null
-                                ? DateFormat('hh:mm:ss a')
-                                .format(safeParse(data['punch_in_time'])!)
-                                : '-',
-                          ),
-                        ),
-                        DataCell( Builder( builder: (context) { final lat = double.tryParse(data['punch_in_lat']?.toString() ?? ''); final lng = double.tryParse(data['punch_in_lng']?.toString() ?? ''); if (lat == null || lng == null) { return const Text("-"); } return FutureBuilder<String>( future: getAddressFromLatLng(lat, lng), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) { return const Text("Loading..."); } return Text( snapshot.data ?? "Address not found", maxLines: 2, overflow: TextOverflow.ellipsis, ); }, ); }, ), ),
-                        DataCell(
-                          Text(
-                            safeParse(data['punch_out_time']) != null
-                                ? DateFormat('dd-MM-yyyy')
-                                .format(safeParse(data['punch_out_time'])!)
-                                : '-',
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            safeParse(data['punch_out_time']) != null
-                                ? DateFormat('hh:mm:ss a')
-                                .format(safeParse(data['punch_out_time'])!)
-                                : '-',
-                          ),
-                        ),
-                        DataCell( Builder( builder: (context) { final lat = double.tryParse(data['punch_out_lat']?.toString() ?? ''); final lng = double.tryParse(data['punch_out_lng']?.toString() ?? ''); if (lat == null || lng == null) { return const Text("-"); } return FutureBuilder<String>( future: getAddressFromLatLng(lat, lng), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) { return const Text("Loading..."); } return Text( snapshot.data ?? "Address not found", maxLines: 2, overflow: TextOverflow.ellipsis, ); }, ); }, ), ),
-                        DataCell(
-                          Row(
-                            children: [
-                              Text(
-                                safeTimeParse(data['shift_start']) != null
-                                    ? DateFormat('hh:mm a')
-                                    .format(safeTimeParse(data['shift_start'])!)
-                                    : '-',
-                              ),
-                              const Text(" - "),
-                              Text(
-                                safeTimeParse(data['shift_end']) != null
-                                    ? DateFormat('hh:mm a')
-                                    .format(safeTimeParse(data['shift_end'])!)
-                                    : '-',
-                              ),
-                            ],
-                          ),
-                        ),
-                        DataCell(
-                          data['punch_in_image'] != null &&
-                              data['punch_in_image'].toString().isNotEmpty
-                              ? InkWell(
-                            onTap: () {
-                              _showImageDialog(
-                                context,
-                                data['punch_in_image'],
-                              );
-                            },
-                            child: Image.network(
-                              data['punch_in_image'],
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.broken_image),
-                            ),
-                          )
-                              : const Icon(Icons.image_not_supported),
-                        ),
-                        DataCell(
-                          data['punch_out_image'] != null &&
-                              data['punch_out_image'].toString().isNotEmpty
-                              ? InkWell(
-                            onTap: () {
-                              _showImageDialog(
-                                context,
-                                data['punch_out_image'],
-                              );
-                            },
-                            child: Image.network(
-                              data['punch_out_image'],
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.broken_image),
-                            ),
-                          )
-                              : const Icon(Icons.image_not_supported),
-                        ),
-                        DataCell(Text(data['punch_in_remark'] ?? '-')),
-                        DataCell(Text(data['punch_out_remark'] ?? '-')),
-                        //DataCell(Text(data['total_break_minutes'] ?? '-')),
-                        DataCell(Text(data['late'] ?? '-')),
-                        DataCell(
-                          Text(
-                            data['total_working_minutes'] != null
-                                ? (() {
-                              int totalMinutes = int.parse(data['total_working_minutes'].toString());
-                              int hours = totalMinutes ~/ 60;
-                              int minutes = totalMinutes % 60;
-                              return "${hours}h ${minutes}m";
-                            })()
-                                : '-',
-                          ),
-                        ),
+                              ],
+                              rows: paginatedRecords.map((data) {
+                                DateTime? parse(dynamic v) {
+                                  if (v == null) return null;
+                                  try {
+                                    return DateTime.parse(v.toString());
+                                  } catch (_) {
+                                    return null;
+                                  }
+                                }
 
-                      ]);
-                    }).toList(),
+                                return DataRow(cells: [
+                                  //DataCell(Text(data['id'] ?? '-')),
+                                  DataCell(
+                                    Text(
+                                      safeParse(data['created_at']) != null
+                                          ? DateFormat('dd-MM-yyyy')
+                                          .format(safeParse(data['created_at'])!)
+                                          : '-',
+                                    ),
+                                  ),
+                                  DataCell(Text(data['uid'] ?? '-')),
+                                  DataCell(Text(data['name'] ?? '-')),
+                                  DataCell(Text(data['department'] ?? '-')),
+                                  DataCell(Text(data['office_name'] ?? '-')),
+                                  DataCell(
+                                    Text(
+                                      data['status'] == 'HOLYDAY'
+                                          ? 'WO'
+                                          : (data['status'] ?? '-'),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      safeParse(data['punch_in_time']) != null
+                                          ? DateFormat('dd-MM-yyyy')
+                                          .format(safeParse(data['punch_in_time'])!)
+                                          : '-',
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      safeParse(data['punch_in_time']) != null
+                                          ? DateFormat('hh:mm:ss a')
+                                          .format(safeParse(data['punch_in_time'])!)
+                                          : '-',
+                                    ),
+                                  ),
+                                  DataCell(
+                                    InkWell(
+                                      onTap: () async {
+                                        final lat = double.tryParse(data['punch_in_lat'] ?? '');
+                                        final lng = double.tryParse(data['punch_in_lng'] ?? '');
+
+                                        if (lat != null && lng != null) {
+                                          String address = await getAddressFromLatLng(lat, lng);
+
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: Text("Address"),
+                                              content: Text(address),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: const Text("View Address",
+                                          style: TextStyle(color: Colors.blue)),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      safeParse(data['punch_out_time']) != null
+                                          ? DateFormat('dd-MM-yyyy')
+                                          .format(safeParse(data['punch_out_time'])!)
+                                          : '-',
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      safeParse(data['punch_out_time']) != null
+                                          ? DateFormat('hh:mm:ss a')
+                                          .format(safeParse(data['punch_out_time'])!)
+                                          : '-',
+                                    ),
+                                  ),
+                                  DataCell(
+                                    InkWell(
+                                      onTap: () async {
+                                        final lat = double.tryParse(data['punch_out_lat'] ?? '');
+                                        final lng = double.tryParse(data['punch_out_lng'] ?? '');
+
+                                        if (lat != null && lng != null) {
+                                          String address = await getAddressFromLatLng(lat, lng);
+
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: Text("Address"),
+                                              content: Text(address),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: const Text("View Address",
+                                          style: TextStyle(color: Colors.blue)),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        Text(
+                                          safeTimeParse(data['shift_start']) != null
+                                              ? DateFormat('hh:mm a')
+                                              .format(safeTimeParse(data['shift_start'])!)
+                                              : '-',
+                                        ),
+                                        const Text(" - "),
+                                        Text(
+                                          safeTimeParse(data['shift_end']) != null
+                                              ? DateFormat('hh:mm a')
+                                              .format(safeTimeParse(data['shift_end'])!)
+                                              : '-',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  DataCell(
+                                    data['punch_in_image'] != null &&
+                                        data['punch_in_image'].toString().isNotEmpty
+                                        ? InkWell(
+                                      onTap: () {
+                                        _showImageDialog(
+                                          context,
+                                          data['punch_in_image'],
+                                        );
+                                      },
+                                      child: Image.network(
+                                        data['punch_in_image'],
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                        const Icon(Icons.broken_image),
+                                      ),
+                                    )
+                                        : const Icon(Icons.image_not_supported),
+                                  ),
+                                  DataCell(
+                                    data['punch_out_image'] != null &&
+                                        data['punch_out_image'].toString().isNotEmpty
+                                        ? InkWell(
+                                      onTap: () {
+                                        _showImageDialog(
+                                          context,
+                                          data['punch_out_image'],
+                                        );
+                                      },
+                                      child: Image.network(
+                                        data['punch_out_image'],
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                        const Icon(Icons.broken_image),
+                                      ),
+                                    )
+                                        : const Icon(Icons.image_not_supported),
+                                  ),
+                                  DataCell(Text(data['punch_in_remark'] ?? '-')),
+                                  DataCell(Text(data['punch_out_remark'] ?? '-')),
+                                  //DataCell(Text(data['total_break_minutes'] ?? '-')),
+                                  DataCell(Text(data['late'] ?? '-')),
+                                  DataCell(
+                                    Text(
+                                      data['total_working_minutes'] != null
+                                          ? (() {
+                                        int totalMinutes = int.parse(data['total_working_minutes'].toString());
+                                        int hours = totalMinutes ~/ 60;
+                                        int minutes = totalMinutes % 60;
+                                        return "${hours}h ${minutes}m";
+                                      })()
+                                          : '-',
+                                    ),
+                                  ),
+
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
+
+            // ✅ PAGINATION (OUTSIDE SCROLL → PERFECT CENTER)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: currentPage > 0
+                        ? () {
+                      setState(() {
+                        currentPage--;
+                      });
+                    }
+                        : null,
+                    child: const Text("Previous"),
+                  ),
+
+                  const SizedBox(width: 20),
+
+                  Text(
+                    "Page ${currentPage + 1} of ${((filteredRecords.length - 1) ~/ rowsPerPage) + 1}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(width: 20),
+
+                  ElevatedButton(
+                    onPressed:
+                    (currentPage + 1) * rowsPerPage < filteredRecords.length
+                        ? () {
+                      setState(() {
+                        currentPage++;
+                      });
+                    }
+                        : null,
+                    child: const Text("Next"),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
 
