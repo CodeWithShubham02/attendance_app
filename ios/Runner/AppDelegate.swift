@@ -18,57 +18,57 @@ import GoogleMaps
   }
 
   // 🔥 App Close Detection
-  override func applicationWillTerminate(_ application: UIApplication) {
-
-    print("AUTO_PUNCH: App terminated")
-
-    let defaults = UserDefaults.standard
-
-    let attendanceId = defaults.string(forKey: "flutter.attendance_id")
-    let uid = defaults.string(forKey: "flutter.uid")
-    let cid = defaults.string(forKey: "flutter.cid")
-
-    if attendanceId != nil && uid != nil && cid != nil {
-
-        let urlString = "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=\(attendanceId!)"
-        guard let url = URL(string: urlString) else { return }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        let params = [
-            "action":"punch_out",
-            "status":"Present",
-            "uid":uid!,
-            "cid":cid!,
-            "lat":"0",
-            "lng":"0",
-            "remark":"Auto punch Out - App closed",
-            "image":"NA"
-        ]
-
-        let bodyString = params.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
-        request.httpBody = bodyString.data(using: .utf8)
-
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-
-            if let error = error {
-                print("AUTO_PUNCH API FAILED: \(error)")
-                return
-            }
-
-            print("AUTO_PUNCH API SUCCESS")
-
-            // Remove attendance
-            defaults.removeObject(forKey: "flutter.attendance_id")
-            defaults.removeObject(forKey: "flutter.uid")
-
-            defaults.synchronize()
-
-            print("AUTO_PUNCH Attendance Removed")
-        }
-
-        task.resume()
-    }
-  }
+//   override func applicationWillTerminate(_ application: UIApplication) {
+//
+//     print("AUTO_PUNCH: App terminated")
+//
+//     let defaults = UserDefaults.standard
+//
+//     let attendanceId = defaults.string(forKey: "flutter.attendance_id")
+//     let uid = defaults.string(forKey: "flutter.uid")
+//     let cid = defaults.string(forKey: "flutter.cid")
+//
+//     if attendanceId != nil && uid != nil && cid != nil {
+//
+//         let urlString = "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=\(attendanceId!)"
+//         guard let url = URL(string: urlString) else { return }
+//
+//         var request = URLRequest(url: url)
+//         request.httpMethod = "POST"
+//
+//         let params = [
+//             "action":"punch_out",
+//             "status":"Present",
+//             "uid":uid!,
+//             "cid":cid!,
+//             "lat":"0",
+//             "lng":"0",
+//             "remark":"Auto punch Out - App closed",
+//             "image":"NA"
+//         ]
+//
+//         let bodyString = params.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+//         request.httpBody = bodyString.data(using: .utf8)
+//
+//         let task = URLSession.shared.dataTask(with: request) { data, response, error in
+//
+//             if let error = error {
+//                 print("AUTO_PUNCH API FAILED: \(error)")
+//                 return
+//             }
+//
+//             print("AUTO_PUNCH API SUCCESS")
+//
+//             // Remove attendance
+//             defaults.removeObject(forKey: "flutter.attendance_id")
+//             defaults.removeObject(forKey: "flutter.uid")
+//
+//             defaults.synchronize()
+//
+//             print("AUTO_PUNCH Attendance Removed")
+//         }
+//
+//         task.resume()
+//     }
+//   }
 }
