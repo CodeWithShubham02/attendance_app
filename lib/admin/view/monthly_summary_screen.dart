@@ -82,7 +82,11 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
 
   // 🟢 HEADER ROW (same as DataTable)
   sheet.appendRow([
+    TextCellValue("From Date"),
+    TextCellValue("To Date"),
     TextCellValue("UID"),
+    TextCellValue("Userid"),
+    TextCellValue("City Name"),
     TextCellValue("Name"),
     TextCellValue("Executive"),
     TextCellValue("Office Name"),
@@ -98,14 +102,17 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
     TextCellValue("Total HalfDay"),
     TextCellValue("Total Break Time \n (HH:MM:SS)"),
     TextCellValue("Total Working Time \n (HH:MM:SS)"),
-    TextCellValue("From Date"),
-    TextCellValue("To Date"),
+
   ]);
 
   // 🔵 DATA ROWS
   for (final r in records) {
     sheet.appendRow([
+      TextCellValue(r.fromDate),
+      TextCellValue(r.toDate),
       TextCellValue(r.uid.toString()),
+      TextCellValue(r.userid),
+      TextCellValue(r.city_name),
       TextCellValue(r.name),
       TextCellValue(r.department), // Executive
       TextCellValue(r.officeName),
@@ -121,8 +128,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
       TextCellValue(r.totalHalfDay.toString()),
       TextCellValue(r.total_break_minutes.toString()),
       TextCellValue(r.totalTimeFormate.toString()),
-      TextCellValue(r.fromDate),
-      TextCellValue(r.toDate),
+
     ]);
   }
 
@@ -321,7 +327,11 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                     headingRowHeight: 48,
                     dataRowHeight: 46,
                     columns:  [
+                      DataColumn(label: Text("From Date")),
+                      DataColumn(label: Text("To Date")),
                       DataColumn(label: Text("UID")),
+                      DataColumn(label: Text("UserId")),
+                      DataColumn(label: Text("City Name")),
                       DataColumn(label: Text("Name")),
                       DataColumn(
                         label: Row(
@@ -388,13 +398,16 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                       DataColumn(label: Text("Total Break Time \n  (HH:MM:SS)")),
                       DataColumn(label: Text("Total Working Time \n  (HH:MM:SS)")),
                       //DataColumn(label: Text("Total Hours")),
-                      DataColumn(label: Text("From Date")),
-                      DataColumn(label: Text("To Date")),
+
                     ],
                     rows: records.map((r) {
                       return DataRow(
                         cells: [
+                          DataCell(Text(formatDate(r.fromDate))),
+                          DataCell(Text(formatDate(r.toDate))),
                           DataCell(Text(r.uid.toString())),
+                          DataCell(Text(r.userid.toString())),
+                          DataCell(Text(r.city_name.toString())),
                           DataCell(Text(r.name)),
                           DataCell(Text(r.department)),
                           DataCell(Text(r.officeName)),
@@ -411,8 +424,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                           DataCell(Text(r.total_break_minutes.toString())),
                           DataCell(Text(r.totalTimeFormate.toString())),
                           //DataCell(Text(r.totalHour.toString())),
-                          DataCell(Text(formatDate(r.fromDate))),
-                          DataCell(Text(formatDate(r.toDate))),
+
                         ],
                       );
                     }).toList(),

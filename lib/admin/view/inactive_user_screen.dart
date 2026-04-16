@@ -1,3 +1,4 @@
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -5,6 +6,7 @@ import 'dart:io';
 import 'package:aws_s3_api/s3-2006-03-01.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -32,6 +34,7 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
   void initState() {
     super.initState();
     loadUsers();
+    loadData();
   }
 
   Future<void> loadUsers() async {
@@ -44,6 +47,19 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
         .toList();
 
     setState(() => isLoading = false);
+  }
+  List<String> states = [];
+  List<String> cities = [];
+  String? selectedCities;
+  String? selectedState;
+  Future<void> loadData() async {
+    final stateRes = await rootBundle.loadString('assets/states.json');
+    final cityRes = await rootBundle.loadString('assets/cities.json');
+
+    setState(() {
+      states = List<String>.from(jsonDecode(stateRes));
+      cities = List<String>.from(jsonDecode(cityRes));
+    });
   }
   void editUser(UserModel user) {
     showDialog(
@@ -58,6 +74,9 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
         final userImgController = TextEditingController(text: user.userImg);
         final imeiNoController = TextEditingController(text: user.imeiNo);
         final fullNameController = TextEditingController(text: user.fullName);
+        final cityNameController = TextEditingController(text: user.cityName);
+        final stateNameController = TextEditingController(text: user.districtName);
+        final pinCodeController = TextEditingController(text: user.pinCode);
         final emailController = TextEditingController(text: user.userEmail);
         final phoneController = TextEditingController(text: user.userPhone);
         final genderController = TextEditingController(text: user.gender);
@@ -80,8 +99,11 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
         final roleController = TextEditingController(text: user.role);
         final createdAtController = TextEditingController(text: user.createdAt);
         final lastDayController = TextEditingController(text: user.lastworkingdate);
-
+        String selectedStatus = statusController.text.isNotEmpty
+            ? statusController.text
+            : "active"; // default
         bool isUpdating = false;
+
 
         return StatefulBuilder(builder: (context, setState) {
           return AlertDialog(
@@ -93,46 +115,133 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
                   children: [
                     TextField(
                         controller: fullNameController,
-                        decoration: const InputDecoration(labelText: "Full Name")),
+                        decoration: const InputDecoration(labelText: "Full Name",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: emailController,
-                        decoration: const InputDecoration(labelText: "Email")),
+                        decoration: const InputDecoration(labelText: "Email",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: phoneController,
-                        decoration: const InputDecoration(labelText: "Phone")),
+                        decoration: const InputDecoration(labelText: "Phone",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+
+                    DropdownSearch<String>(
+                      items: states,
+                      selectedItem: stateNameController.text.isNotEmpty
+                          ? stateNameController.text
+                          : null,
+
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                      ),
+
+                      dropdownDecoratorProps: DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "State Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      onChanged: (value) {
+                        setState(() {
+                          selectedState = value;
+                          stateNameController.text = value ?? "";
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
+                    DropdownSearch<String>(
+                      items: cities,
+                      selectedItem: cityNameController.text.isNotEmpty
+                          ? cityNameController.text
+                          : null,
+
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                      ),
+
+                      dropdownDecoratorProps: DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "City Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCities = value;
+                          cityNameController.text = value ?? "";
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
                     TextField(
-                        controller: statusController,
-                        decoration: const InputDecoration(labelText: "Status")),
+                        controller: pinCodeController,
+                        decoration: const InputDecoration(labelText: "Pin Code",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: "Status",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ["active", "inactive"].map((item) {
+                        return DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(item),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedStatus = value!;
+                          statusController.text = value; // update controller
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
+                    TextField(
+                        controller: lastDayController,
+                        decoration: const InputDecoration(labelText: "Last Working Date",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+                    TextField(
+                        controller: imeiNoController,
+                        decoration: const InputDecoration(labelText: "IMEI No",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchNameController,
                         readOnly: true,
-                        decoration: const InputDecoration(labelText: "Branch")),
+                        decoration: const InputDecoration(labelText: "Branch",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchDistanceController,
-                        decoration: const InputDecoration(labelText: "Distance")),
+                        decoration: const InputDecoration(labelText: "Distance",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchLatController,
-                        decoration: const InputDecoration(labelText: "Lat")),
+                        decoration: const InputDecoration(labelText: "Lat",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchLongController,
-                        decoration: const InputDecoration(labelText: "Long")),
-
+                        decoration: const InputDecoration(labelText: "Long",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: deptNameController,
                         readOnly: true,
-                        decoration: const InputDecoration(labelText: "Department")),
+                        decoration: const InputDecoration(labelText: "Department",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: shiftStartController,
-                        decoration: const InputDecoration(labelText: "Shift Start")),
+                        readOnly: true,
+                        decoration: const InputDecoration(labelText: "Shift Start",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: shiftEndController,
-                        decoration: const InputDecoration(labelText: "Shift End")),
-                    TextField(
-                        controller: imeiNoController,
-                        decoration: const InputDecoration(labelText: "IMEI No")),
-                    TextField(
-                        controller: lastDayController,
-                        decoration: const InputDecoration(labelText: "Last Working Date")),
+                        readOnly: true,
+                        decoration: const InputDecoration(labelText: "Shift End",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+
+
                     // Add more fields if needed
                   ],
                 ),
@@ -174,6 +283,9 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
                     status: statusController.text,
                     role: roleController.text,
                     createdAt: createdAtController.text,
+                    cityName: cityNameController.text,
+                    stateName: stateNameController.text,
+                    pinCode: pinCodeController.text,
                   );
 
                   setState(() => isUpdating = false);

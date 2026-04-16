@@ -7,6 +7,12 @@ class UserModel {
   final String userImg;
   final String imeiNo;
   final String fullName;
+  final String lastName;
+  final String middleName;
+  final String cityName;
+  final String pinCode;
+  final String districtName;
+  final String reportingPosition;
   final String userEmail;
   final String userPhone;
   final String gender;
@@ -37,6 +43,12 @@ class UserModel {
     required this.userImg,
     required this.imeiNo,
     required this.fullName,
+    required this.lastName,
+    required this.middleName,
+    required this.cityName,
+    required this.pinCode,
+    required this.districtName,
+    required this.reportingPosition,
     required this.userEmail,
     required this.userPhone,
     required this.gender,
@@ -68,6 +80,12 @@ class UserModel {
       "userImg": userImg,
       "imeiNo": imeiNo,
       "fullName": fullName,
+      "lastName": lastName,
+      "middleName": middleName,
+      "cityName": cityName,
+      "pinCode": pinCode,
+      "districtName": districtName,
+      "reportingPosition": reportingPosition,
       "userEmail": userEmail,
       "userPhone": userPhone,
       "gender": gender,
@@ -102,6 +120,13 @@ class UserModel {
       imeiNo: json['imeiNo'] ?? json['imei_no'] ?? '',
 
       fullName: json['fullName'] ?? json['full_name'] ?? '', // ✅ BOTH
+      lastName: json['lastName'] ?? json['last_name'] ?? '',
+      middleName: json['middleName'] ?? json['middle_name'] ?? '',
+      cityName: json['cityName'] ?? json['city_name'] ?? '',
+      pinCode: json['pinCode'] ?? json['pin_code'] ?? '',
+      districtName: json['districtName'] ?? json['district_name'] ?? '',
+      reportingPosition: json['reportingPosition'] ?? json['reporting_position'] ?? '',
+
       userEmail: json['userEmail'] ?? json['user_email'] ?? '',
       userPhone: json['userPhone'] ?? json['user_phone'] ?? '',
       gender: json['gender'] ?? '',

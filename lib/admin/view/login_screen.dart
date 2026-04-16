@@ -22,7 +22,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String selectedRole = 'admin';
+  String selectedRole = 'user';
   final UserController userController=UserController();
   final TextEditingController userIdCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
@@ -98,7 +98,14 @@ class _LoginScreenState extends State<LoginScreen> {
         status: data['status'],
         role: data['role'],
         createdAt: data['createdAt'],
-        updatedAt: data['updatedAt'],);
+        updatedAt: data['updatedAt'],
+        lastName: data['lastName'] ?? '',
+        middleName: data['middleName'] ?? '',
+        cityName: data['cityName'] ?? '',
+        pinCode:data['pinCode'] ?? '',
+        districtName: data['districtName'] ?? '',
+        reportingPosition: data['reportingPosition'] ?? '',
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('uid', data['uid'].toString());
       await prefs.setString('branchLat',userModel.branchLat);

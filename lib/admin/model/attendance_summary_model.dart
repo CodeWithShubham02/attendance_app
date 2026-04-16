@@ -1,6 +1,8 @@
 class AttendanceSummary {
   final int uid;
   final String name;
+  final String userid;
+  final String city_name;
   final String department;
   final String officeName;
   final String totalTimeFormate;
@@ -23,6 +25,8 @@ class AttendanceSummary {
   AttendanceSummary({
     required this.uid,
     required this.name,
+    required this.userid,
+    required this.city_name,
     required this.department,
     required this.totalTimeFormate,
     required this.officeName,
@@ -61,6 +65,8 @@ class AttendanceSummary {
   factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
     return AttendanceSummary(
       uid: _toInt(json['uid']),
+      userid: json['userid']?.toString() ?? '',
+      city_name: json['city_name']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       department: json['department']?.toString() ?? '',
       totalTimeFormate: json['total_time_format']?.toString() ?? '',

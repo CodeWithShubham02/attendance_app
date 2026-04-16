@@ -159,15 +159,25 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
   // ---------------- SHIFT ----------------
 
 
-  TimeOfDay parseTime(String time) {
-    final parts = time.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
+  TimeOfDay? parseTime(String? time) {
+    try {
+      if (time == null || time.isEmpty) return null;
+
+      final parts = time.split(':');
+      return TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   bool isWithinShift() {
+    if (shiftStart == null || shiftEnd == null) {
+      return false; // or handle properly
+    }
+
     final now = TimeOfDay.now();
 
     int toMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
@@ -276,38 +286,38 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
   final ImagePicker _picker = ImagePicker();
   Future<String?> pickImagePhoto1(ImageSource source) async {
     try {
+      // 🛑 STOP tracking before camera
+      isTrackingActive = false;
+      locationTimer?.cancel();
+
       setState(() => isLoadingPhoto = true);
 
-      final XFile? picked =
-      await _picker.pickImage(source: source, imageQuality: 50,preferredCameraDevice: CameraDevice.front, maxWidth: 800,
-        maxHeight: 800,);
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        preferredCameraDevice: CameraDevice.front,
+      );
 
-      if (picked == null) return null;
+      if (picked == null) {
+        // ▶️ Resume tracking if user cancels
+        isTrackingActive = true;
+        startLocationTracking();
+        return null;
+      }
 
       final rawBytes = await picked.readAsBytes();
 
-      // 📍 get location
       final position = await _getCurrentLocation();
 
-      // 🖼️ add watermark
       final watermarkedBytes = await addWatermark(
         imageBytes: rawBytes,
         lat: position.latitude,
         lng: position.longitude,
       );
 
-      // 👀 local preview
-      if (kIsWeb) {
-        webPhoto = watermarkedBytes;
-      } else {
-        photo = File(picked.path);
-      }
-      setState(() {});
-
       final fileName =
           "uploads/image_${DateTime.now().millisecondsSinceEpoch}.jpg";
 
-      // ☁️ upload to S3
       final imageUrl = await uploadImageToS3(
         imageBytes: watermarkedBytes,
         bucket: "joizone-s3",
@@ -315,11 +325,17 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       );
 
       photoUrl = imageUrl;
-      print("✅ Uploaded Image URL: $imageUrl");
+
+      // ▶️ RESTART tracking after camera
+      isTrackingActive = true;
+      startLocationTracking();
 
       return imageUrl;
+
     } catch (e) {
-      print("❌ Pick/Upload error: $e");
+      // ▶️ Always restart tracking
+      isTrackingActive = true;
+      startLocationTracking();
       return null;
     } finally {
       setState(() => isLoadingPhoto = false);
@@ -389,97 +405,11 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       int.parse(parts[1]),
     );
   }
-  // Map<String, dynamic> getPunchStatus({
-  //   required DateTime shiftStart,
-  //   required DateTime shiftEnd,
-  // }) {
-  //   final now = DateTime.now();
-  //
-  //   DateTime start = shiftStart;
-  //   DateTime end = shiftEnd;
-  //
-  //   // 🔥 Handle Night Shift Properly
-  //   if (end.isBefore(start)) {
-  //     // Means shift crosses midnight
-  //     if (now.isBefore(start)) {
-  //       start = start.subtract(const Duration(days: 1));
-  //     } else {
-  //       end = end.add(const Duration(days: 1));
-  //     }
-  //   }
-  //
-  //   final allowedStart = start.subtract(const Duration(minutes: 120));
-  //   final presentLimit = start.add(const Duration(minutes: 5));
-  //
-  //   // ❌ Too early
-  //   if (now.isBefore(allowedStart)) {
-  //     throw 'Punch allowed only after ${allowedStart.hour}:${allowedStart.minute.toString().padLeft(2, '0')}';
-  //   }
-  //
-  //   // ❌ Shift window over
-  //   if (now.isAfter(end)) {
-  //     throw 'Shift already ended';
-  //   }
-  //
-  //   // ✅ Late logic
-  //   final isLate = now.isAfter(presentLimit) ? 1 : 0;
-  //
-  //   return {
-  //     'status': 'Present',
-  //     'late': isLate,
-  //   };
-  // }
 
-  // Map<String, dynamic>  getPunchStatus({
-  //   required DateTime shiftStart,
-  //   required DateTime shiftEnd,
-  // }) {
-  //   final now = DateTime.now();
-  //
-  //   DateTime start = shiftStart;
-  //   DateTime end = shiftEnd;
-  //
-  //   // 🔥 Handle Night Shift Properly
-  //   if (end.isBefore(start)) {
-  //     // Means shift crosses midnight
-  //     if (now.isBefore(start)) {
-  //       start = start.subtract(const Duration(days: 1));
-  //     } else {
-  //       end = end.add(const Duration(days: 1));
-  //     }
-  //   }
-  //
-  //   final allowedStart = start.subtract(const Duration(minutes: 360));
-  //   final presentLimit = start.add(const Duration(minutes: 10));
-  //
-  //   // ❌ Too early
-  //   if (now.isBefore(allowedStart)) {
-  //     throw 'Punch allowed only after ${allowedStart.hour}:${allowedStart.minute.toString().padLeft(2, '0')}';
-  //   }
-  //
-  //   // ❌ Shift window over
-  //   if (now.isAfter(end)) {
-  //     throw 'Shift already ended';
-  //   }
-  //
-  //   // ✅ Late logic
-  //   final isLate = now.isAfter(presentLimit) ? 1 : 0;
-  //
-  //   // for example user shift time 10:00 am
-  //   //user punch in 10:11 late marks
-  //   //user punch after 1 hour 11:00 1 hr late
-  //   //user punch 12:00 half day
-  //
-  //   return {
-  //     'status': 'Present',
-  //     'late': isLate, //late varchar data type supose user ka shift 10:00 bje se hai
-  //     //agar user 10 bje se pahle punch in karta hai to late ke ander type ho eraly punch in
-  //     //agr 10
-  //   };
-  // }
   Map<String, dynamic>  getPunchStatus({
     required DateTime shiftStart,
     required DateTime shiftEnd,
+    required String department,
   }) {
     final now = DateTime.now();
 
@@ -509,7 +439,13 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     if (now.isAfter(end)) {
       throw 'Shift already ended';
     }
-
+    /// 🔥 TEAM LEADER OVERRIDE
+    if (department == 'Team Leader') {
+      return {
+        "status": "Present",
+        "late": "On Time",
+      };
+    }
     // ✅ Late logic
     String status = "";
     String lateText = "";
@@ -551,15 +487,19 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
 
   Future<void> checkGpsAndAutoPunchOut() async {
+    // ❌ DO NOT RUN IF CAMERA IS OPEN
+    if (!isTrackingActive) return;
+
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled && attendanceId != null) {
-      debugPrint("🚨 GPS turned OFF — Auto Punch Out");
-
       await autoPunchOut("GPS turned off");
-      Get.offAll(() => LoginScreen());
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("🚨 GPS turned OFF — Auto Punch Out")));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("GPS OFF - Auto Punch Out")),
+        );
+      }
     }
   }
   Future<void> autoPunchOut(String reason) async {
@@ -675,6 +615,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     final status = getPunchStatus(
       shiftStart: shiftStart,
       shiftEnd: shiftEnd,
+      department: widget.userModel.departmentName,
     );
     print("-------------");
     print(status['status']);
@@ -690,9 +631,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
         "cid": widget.userModel.cid,
         'status': status['status'],
         // ✅ FIXED
-        "late": widget.userModel.departmentName == 'Team Leader'
-            ? "On Time"
-            : status['late'].toString(), // 0 ya 1
+        "late":status['late'].toString(), // 0 ya 1
         "distance": currentDistance!.toString(),
         "department": widget.userModel.departmentName,
         "name": widget.userModel.fullName,
@@ -798,14 +737,14 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       }
 
       if (currentPosition == null) {
-        throw 'Location not available';
+        throw "Location not ready";
       }
 
       final prefs = await SharedPreferences.getInstance();
       attendanceId = prefs.getString('attendance_id');
 
       if (attendanceId == null) {
-        throw 'Already Punch out';
+        throw 'Already punched out.';
       }
 
       // final shiftEnd =
@@ -839,6 +778,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       await stopLocationTracking();
       // ❌ REMOVE attendance_id
       await prefs.remove('attendance_id');
+      attendanceId = null;
       await prefs.remove('uid');
       await prefs.remove('cid');
       await prefs.clear();
@@ -1018,7 +958,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
               icon: const Icon(Icons.camera_alt),
               label: const Text("Capture Image"),
             ),
-            if (photo != null || photoUrl != null)
+            if (photo != null)
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: Image.file(
@@ -1026,8 +966,16 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
                   height: 100,
                   width: 100,
                 ),
+              )
+            else if (photoUrl != null)
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Image.network(
+                  photoUrl!,
+                  height: 100,
+                  width: 100,
+                ),
               ),
-
             const SizedBox(height: 10),
 
             isLoading

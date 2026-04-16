@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_s3_api/s3-2006-03-01.dart';
 import 'package:aws_s3_upload/aws_s3_upload.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:image_picker/image_picker.dart';
@@ -172,9 +175,24 @@ class _AddUserScreenState extends State<AddUserScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    loadData();
     loadBranches();
     loadShift();
     loadDepartment();
+
+  }
+  List<String> states = [];
+  List<String> cities = [];
+  String? selectedCities;
+  String? selectedState;
+  Future<void> loadData() async {
+    final stateRes = await rootBundle.loadString('assets/states.json');
+    final cityRes = await rootBundle.loadString('assets/cities.json');
+
+    setState(() {
+      states = List<String>.from(jsonDecode(stateRes));
+      cities = List<String>.from(jsonDecode(cityRes));
+    });
   }
 
   final ImagePicker _picker = ImagePicker();
@@ -299,6 +317,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   bool isPasswordVisible = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -576,34 +595,57 @@ class _AddUserScreenState extends State<AddUserScreen> {
             ),
             Row(
               children: [
-
-                /// CITY NAME
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextFormField(
-                      controller: cityNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: "City Name *",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                ),
-
                 /// DISTRICT NAME
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: TextFormField(
-                      controller: districtNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: "District Name *",
-                        border: OutlineInputBorder(),
+                    child: DropdownSearch<String>(
+                      items: states,
+                      selectedItem: selectedState,
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
                       ),
-                    ),
+                      dropdownDecoratorProps: DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "State Name *",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedState = value;
+                          districtNameCtrl.text = value ?? "";
+                        });
+                      },
+                    )
                   ),
                 ),
+                /// CITY NAME
+                Expanded(
+                  child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: DropdownSearch<String>(
+                        items: cities,
+                        selectedItem: selectedCities,
+                        popupProps: PopupProps.menu(
+                          showSearchBox: true,
+                        ),
+                        dropdownDecoratorProps: DropDownDecoratorProps(
+                          dropdownSearchDecoration: InputDecoration(
+                            labelText: "City Name *",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCities = value;
+                            cityNameCtrl.text = value ?? "";
+                          });
+                        },
+                      )
+                  ),
+                ),
+
 
                 /// FULL ADDRESS
                 Expanded(

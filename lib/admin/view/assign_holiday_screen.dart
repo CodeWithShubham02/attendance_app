@@ -118,10 +118,21 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
       );
     }
   }
+  Future<List<Map<String, dynamic>>> fetchUsers() async {
+    final res = await http.get(
+      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_users.php"),
+    );
+
+    final data = jsonDecode(res.body);
+
+    if (data['status'] == true) {
+      return List<Map<String, dynamic>>.from(data['data']);
+    } else {
+      return [];
+    }
+  }
   Future<void> downloadTemplate() async {
     try {
-
-      // ✅ Only for Mobile
       if (!kIsWeb) {
         var status = await Permission.storage.request();
         if (!status.isGranted) {
@@ -133,9 +144,11 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
       }
 
       final excel = Excel.createExcel();
-      final sheet = excel['Sheet1'];
 
-      sheet.appendRow([
+      // 🟢 Sheet 1 → Template
+      final sheet1 = excel['Template'];
+
+      sheet1.appendRow([
         TextCellValue("cid"),
         TextCellValue("uid"),
         TextCellValue("name"),
@@ -147,14 +160,51 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
         TextCellValue("shift_end"),
       ]);
 
+      // 🟡 Sheet 2 → Users Data
+      final sheet2 = excel['Users'];
+
+      sheet2.appendRow([
+        TextCellValue("cid"),
+        TextCellValue("uid"),
+        TextCellValue("agent_id"),
+        TextCellValue("agent_name"),
+        TextCellValue("user_type"),
+        TextCellValue("site_name"),
+        TextCellValue("status"),
+      ]);
+
+      // 🔥 API CALL
+      List<Map<String, dynamic>> users = await fetchUsers();
+
+      // ⚠️ Safety check
+      if (users.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No users data found")),
+        );
+      }
+
+      // ✅ Fill Users Sheet
+      for (var user in users) {
+        sheet2.appendRow([
+          TextCellValue("${user['cid'] ?? ''}"),
+          TextCellValue("${user['uid'] ?? ''}"),
+          TextCellValue("${user['userid'] ?? ''}"),
+          TextCellValue("${user['full_name'] ?? ''}"),
+          TextCellValue("${user['user_type'] ?? ''}"),
+          TextCellValue("${user['branch_name'] ?? ''}"),
+          TextCellValue("${user['status'] ?? ''}"),
+        ]);
+      }
+
+      // ❗ Default "Sheet1" remove (important)
+      excel.delete('Sheet1');
+
       final fileBytes = excel.encode();
       if (fileBytes == null) return;
 
       if (kIsWeb) {
-        // 🌐 WEB DOWNLOAD
         downloadForWeb(fileBytes);
       } else {
-        // 📱 MOBILE SAVE
         final dir = await getExternalStorageDirectory();
         final filePath = "${dir!.path}/roster_template.xlsx";
 

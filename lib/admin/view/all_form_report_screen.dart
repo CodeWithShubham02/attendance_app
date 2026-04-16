@@ -88,9 +88,9 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Mark as Duplicate?"),
+            title: const Text("Form as Inactive?"),
             content: const Text(
-              "Are you sure you want to mark this form as duplicate?",
+              "Are you sure you want to inactive?",
             ),
             actions: [
               TextButton(
@@ -236,7 +236,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         TextCellValue(row.id.toString()),
         TextCellValue(row.userId),
         TextCellValue(row.userName),
-        TextCellValue(row.cityName),
+        TextCellValue(row.siteName),
         TextCellValue(row.reportDate),
         TextCellValue(formatTime1(row.reportTime ?? "")),
         TextCellValue(row.applicationNo),
@@ -328,7 +328,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         TextCellValue(row.id.toString()),
         TextCellValue(row.userId),
         TextCellValue(row.userName),
-        TextCellValue(row.cityName),
+        TextCellValue(row.siteName),
         TextCellValue(row.reportDate),
         TextCellValue(formatTime1(row.reportTime ?? "")),
         TextCellValue(row.applicationNo),
@@ -468,7 +468,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
   String selectedBankStatus = "";
   List<ClientFormReportModel> allReports = [];
   void _showCityFilter() {
-    List<String> cities = allReports.map((e) => e.cityName).toSet().toList();
+    List<String> cities = allReports.map((e) => e.siteName).toSet().toList();
     showDialog(
       context: context,
       builder: (_) {
@@ -811,7 +811,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
           allReports = snapshot.data!;
 
           final reports = allReports.where((e) {
-            bool cityMatch = selectedCity.isEmpty || e.cityName == selectedCity;
+            bool cityMatch = selectedCity.isEmpty || e.siteName == selectedCity;
             bool userMatch = selectedUserName.isEmpty || e.userName == selectedUserName;
             bool statusMatch = selectedStatus.isEmpty || e.status == selectedStatus;
 
@@ -939,7 +939,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                     DataCell(Text(report.uid.toString())),
                                     DataCell(Text(report.userId)),
                                     DataCell(Text(report.userName)),
-                                    DataCell(Text(report.cityName)),
+                                    DataCell(Text(report.siteName)),
                                     DataCell(Text(report.reportDate)),
                                     DataCell(Text(formatTime1(report.reportTime))),
                                     DataCell(Text(report.applicationNo)),

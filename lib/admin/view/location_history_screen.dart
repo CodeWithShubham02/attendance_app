@@ -138,7 +138,7 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
                 return DropdownMenuItem<UserModel>(
                   value: user,
                   child: Text(
-                    "${user.uid} - ${user.fullName}",
+                    "${user.userid} - ${user.fullName}",
                   ),
                 );
               }).toList(),

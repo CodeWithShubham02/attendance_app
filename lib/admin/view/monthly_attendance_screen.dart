@@ -93,7 +93,11 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
 
       if (response.statusCode == 200) {
         final res = jsonDecode(response.body);
-
+      print("---------------------------------------------");
+      print("---------------------------------------------");
+      print(res);
+      print("---------------------------------------------");
+      print("---------------------------------------------");
         if (res['status'] == true) {
           setState(() {
             attendanceRecords = List<Map<String, dynamic>>.from(res['data'] ?? []).map((e) {
@@ -101,6 +105,8 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
               return {
                 'id': e['id']?.toString() ?? '-',
                 'uid': e['uid']?.toString() ?? '-',
+                'userid': e['userid']?.toString() ?? '-',
+                'city_name': e['city_name']?.toString() ?? '-',
                 'name': e['name']?.toString() ?? '-',
                 'department': e['department']?.toString() ?? '-',
                 'office_name': e['office_name']?.toString() ?? '-',
@@ -125,7 +131,11 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
               };
             }).toList();
             filteredRecords = attendanceRecords;
-
+            print("--------------------filteredRecords-------------------------");
+            print("---------------------------------------------");
+            print(filteredRecords);
+            print("---------------------------------------------");
+            print("---------------------------------------------");
           });
         } else {
           setState(() {
@@ -164,11 +174,15 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
     // 🟢 HEADER ROW
     sheet.appendRow([
       TextCellValue("Date"),
-      TextCellValue("UID"),
+     // TextCellValue("UID"),
+      TextCellValue("City"),
+      TextCellValue("User Id"),
       TextCellValue("User Name"),
       TextCellValue("User Type"),
       TextCellValue("Office Name"),
       TextCellValue("Status"),
+      TextCellValue("Late Marks"),
+      TextCellValue("Working Hours"),
       TextCellValue("Punch In Date"),
       TextCellValue("Punch In Time"),
       TextCellValue("Punch In Image"),
@@ -180,8 +194,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
       TextCellValue("Punch Out Address"),
       TextCellValue("Punch In Remark"),
       TextCellValue("Punch Out Remark"),
-      TextCellValue("Late Marks"),
-      TextCellValue("Working Hours"),
+
 
     ]);
 
@@ -236,7 +249,9 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
             return DateFormat('dd-MM-yyyy').format(parsed); // ✅ Only Date
           })(),
         ),
-        TextCellValue(row['uid']?.toString() ?? ''),
+        //TextCellValue(row['uid']?.toString() ?? ''),
+        TextCellValue(row['city_name']?.toString() ?? ''),
+        TextCellValue(row['userid']?.toString() ?? ''),
         TextCellValue(row['name']?.toString() ?? ''),
         TextCellValue(row['department']?.toString() ?? ''),
         TextCellValue(row['office_name']?.toString() ?? ''),
@@ -244,6 +259,24 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
           row['status']?.toString() == 'HOLYDAY'
               ? 'WO'
               : (row['status']?.toString() ?? ''),
+        ),
+        TextCellValue(row['late']?.toString() ?? ''),
+        TextCellValue(
+          (() {
+            final value = row['working_minutes'];
+
+            if (value == null || value.toString().isEmpty) {
+              return '';
+            }
+
+            final totalMinutes = int.tryParse(value.toString());
+            if (totalMinutes == null) return '';
+
+            final hours = totalMinutes ~/ 60;
+            final minutes = totalMinutes % 60;
+
+            return "${hours}h ${minutes}m";
+          })(),
         ),
         TextCellValue(
           (() {
@@ -322,24 +355,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
         //TextCellValue(row['punch_out_lat']?.toString() ?? ''),
         TextCellValue(row['punch_in_remark']?.toString() ?? ''),
         TextCellValue(row['punch_out_remark']?.toString() ?? ''),
-        TextCellValue(row['late']?.toString() ?? ''),
-        TextCellValue(
-          (() {
-            final value = row['working_minutes'];
 
-            if (value == null || value.toString().isEmpty) {
-              return '';
-            }
-
-            final totalMinutes = int.tryParse(value.toString());
-            if (totalMinutes == null) return '';
-
-            final hours = totalMinutes ~/ 60;
-            final minutes = totalMinutes % 60;
-
-            return "${hours}h ${minutes}m";
-          })(),
-        ),
 
       ]);
     }
@@ -640,7 +656,9 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                               columns: [
                                 //DataColumn(label: Text("Attendance ID")),
                                 const DataColumn(label: Text("Date")),
-                                const DataColumn(label: Text("UID")),
+                               // const DataColumn(label: Text("UID")),
+                                const DataColumn(label: Text("City")),
+                                const DataColumn(label: Text("Userid")),
                                 DataColumn(
                                   label: Row(
                                     children: [
@@ -709,6 +727,8 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                                     ],
                                   ),
                                 ),
+                                const DataColumn(label: Text("Late Marks")),
+                                const DataColumn(label: Text("Total Working Minutes")),
                                 const DataColumn(label: Text("Punch In Date")),
                                 const DataColumn(label: Text("Punch In Time")),
                                 const DataColumn(label: Text("Punch In Address")),
@@ -721,8 +741,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                                 const DataColumn(label: Text("Punch In Remark")),
                                 const DataColumn(label: Text("Punch Out Remark")),
                                 //DataColumn(label: Text("Total Break")),
-                                const DataColumn(label: Text("Late Marks")),
-                                const DataColumn(label: Text("Total Working Minutes")),
+
 
                               ],
                               rows: paginatedRecords.map((data) {
@@ -745,7 +764,9 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                                           : '-',
                                     ),
                                   ),
-                                  DataCell(Text(data['uid'] ?? '-')),
+                                  //DataCell(Text(data['uid'] ?? '-')),
+                                  DataCell(Text(data['city_name'] ?? '-')),
+                                  DataCell(Text(data['userid'] ?? '-')),
                                   DataCell(Text(data['name'] ?? '-')),
                                   DataCell(Text(data['department'] ?? '-')),
                                   DataCell(Text(data['office_name'] ?? '-')),
@@ -756,6 +777,20 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                                           : (data['status'] ?? '-'),
                                     ),
                                   ),
+                                  DataCell(Text(data['late'] ?? '-')),
+                                  DataCell(
+                                    Text(
+                                      data['total_working_minutes'] != null
+                                          ? (() {
+                                        int totalMinutes = int.parse(data['total_working_minutes'].toString());
+                                        int hours = totalMinutes ~/ 60;
+                                        int minutes = totalMinutes % 60;
+                                        return "${hours}h ${minutes}m";
+                                      })()
+                                          : '-',
+                                    ),
+                                  ),
+
                                   DataCell(
                                     Text(
                                       safeParse(data['punch_in_time']) != null
@@ -896,19 +931,6 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
                                   DataCell(Text(data['punch_in_remark'] ?? '-')),
                                   DataCell(Text(data['punch_out_remark'] ?? '-')),
                                   //DataCell(Text(data['total_break_minutes'] ?? '-')),
-                                  DataCell(Text(data['late'] ?? '-')),
-                                  DataCell(
-                                    Text(
-                                      data['total_working_minutes'] != null
-                                          ? (() {
-                                        int totalMinutes = int.parse(data['total_working_minutes'].toString());
-                                        int hours = totalMinutes ~/ 60;
-                                        int minutes = totalMinutes % 60;
-                                        return "${hours}h ${minutes}m";
-                                      })()
-                                          : '-',
-                                    ),
-                                  ),
 
                                 ]);
                               }).toList(),

@@ -4,6 +4,7 @@ class ClientFormReportModel {
   final String userId;
   final String userName;
   final String cityName;
+  final String siteName;
   final String reportDate;
   final String reportTime;
   late final String applicationNo;
@@ -28,6 +29,7 @@ class ClientFormReportModel {
     required this.userId,
     required this.userName,
     required this.cityName,
+    required this.siteName,
     required this.reportDate,
     required this.reportTime,
     required this.applicationNo,
@@ -54,6 +56,7 @@ class ClientFormReportModel {
       userId: json['user_id'] ?? '',
       userName: json['user_name'] ?? '',
       cityName: json['city_name'] ?? '',
+      siteName: json['site_name'] ?? '',
       reportDate: json['report_date'] ?? '',
       reportTime: json['report_time'] ?? '',
       applicationNo: json['application_no'] ?? '',

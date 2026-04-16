@@ -542,7 +542,7 @@ class _AllEmployeeAttendanceScreenState
                   columns: [
                     const DataColumn(label: Text("Location")),
                     const DataColumn(label: Text("Date")),
-                    const DataColumn(label: Text("eid")),
+                    const DataColumn(label: Text("userid")),
                     //const DataColumn(label: Text("aid")),
                     DataColumn(
                       label: Row(
@@ -775,7 +775,7 @@ class _AllEmployeeAttendanceScreenState
                               : '-',
                         ),
                       ),
-                      DataCell(Text(e['uid'] ?? '-')),
+                      DataCell(Text(e['userid'] ?? '-')),
                      // DataCell(Text(e['id'] ?? '-')),
                       DataCell(Text(e['name'] ?? '-')),
                       DataCell(Text(e['office_name'] ?? '-')),

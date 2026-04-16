@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_s3_api/s3-2006-03-01.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
@@ -32,6 +34,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
   void initState() {
     super.initState();
     loadUsers();
+    loadData();
   }
 
   Future<void> loadUsers() async {
@@ -44,6 +47,19 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
         .toList();
 
     setState(() => isLoading = false);
+  }
+  List<String> states = [];
+  List<String> cities = [];
+  String? selectedCities;
+  String? selectedState;
+  Future<void> loadData() async {
+    final stateRes = await rootBundle.loadString('assets/states.json');
+    final cityRes = await rootBundle.loadString('assets/cities.json');
+
+    setState(() {
+      states = List<String>.from(jsonDecode(stateRes));
+      cities = List<String>.from(jsonDecode(cityRes));
+    });
   }
   void editUser(UserModel user) {
     showDialog(
@@ -58,6 +74,11 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
         final userImgController = TextEditingController(text: user.userImg);
         final imeiNoController = TextEditingController(text: user.imeiNo);
         final fullNameController = TextEditingController(text: user.fullName);
+
+        final cityNameController = TextEditingController(text: user.cityName);
+        final stateNameController = TextEditingController(text: user.districtName);
+        final pinCodeController = TextEditingController(text: user.pinCode);
+
         final emailController = TextEditingController(text: user.userEmail);
         final phoneController = TextEditingController(text: user.userPhone);
         final genderController = TextEditingController(text: user.gender);
@@ -80,7 +101,9 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
         final roleController = TextEditingController(text: user.role);
         final createdAtController = TextEditingController(text: user.createdAt);
         final lastDayController = TextEditingController(text: user.lastworkingdate);
-
+        String selectedStatus = statusController.text.isNotEmpty
+            ? statusController.text
+            : "active"; // default
         bool isUpdating = false;
 
         return StatefulBuilder(builder: (context, setState) {
@@ -93,46 +116,133 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                   children: [
                     TextField(
                         controller: fullNameController,
-                        decoration: const InputDecoration(labelText: "Full Name")),
+                        decoration: const InputDecoration(labelText: "Full Name",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: emailController,
-                        decoration: const InputDecoration(labelText: "Email")),
+                        decoration: const InputDecoration(labelText: "Email",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: phoneController,
-                        decoration: const InputDecoration(labelText: "Phone")),
+                        decoration: const InputDecoration(labelText: "Phone",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+
+                    DropdownSearch<String>(
+                      items: states,
+                      selectedItem: stateNameController.text.isNotEmpty
+                          ? stateNameController.text
+                          : null,
+
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                      ),
+
+                      dropdownDecoratorProps: DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "State Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      onChanged: (value) {
+                        setState(() {
+                          selectedState = value;
+                          stateNameController.text = value ?? "";
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
+                    DropdownSearch<String>(
+                      items: cities,
+                      selectedItem: cityNameController.text.isNotEmpty
+                          ? cityNameController.text
+                          : null,
+
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                      ),
+
+                      dropdownDecoratorProps: DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "City Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCities = value;
+                          cityNameController.text = value ?? "";
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
                     TextField(
-                        controller: statusController,
-                        decoration: const InputDecoration(labelText: "Status")),
+                        controller: pinCodeController,
+                        decoration: const InputDecoration(labelText: "Pin Code",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: "Status",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ["active", "inactive"].map((item) {
+                        return DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(item),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedStatus = value!;
+                          statusController.text = value; // update controller
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10,),
+                    TextField(
+                        controller: lastDayController,
+                        decoration: const InputDecoration(labelText: "Last Working Date",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+                    TextField(
+                        controller: imeiNoController,
+                        decoration: const InputDecoration(labelText: "IMEI No",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchNameController,
                         readOnly: true,
-                        decoration: const InputDecoration(labelText: "Branch")),
+                        decoration: const InputDecoration(labelText: "Branch",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchDistanceController,
-                        decoration: const InputDecoration(labelText: "Distance")),
+                        decoration: const InputDecoration(labelText: "Distance",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchLatController,
-                        decoration: const InputDecoration(labelText: "Lat")),
+                        decoration: const InputDecoration(labelText: "Lat",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: branchLongController,
-                        decoration: const InputDecoration(labelText: "Long")),
-
+                        decoration: const InputDecoration(labelText: "Long",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: deptNameController,
-
-                        decoration: const InputDecoration(labelText: "Department")),
+                        readOnly: true,
+                        decoration: const InputDecoration(labelText: "Department",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: shiftStartController,
-                        decoration: const InputDecoration(labelText: "Shift Start")),
+                       // readOnly: true,
+                        decoration: const InputDecoration(labelText: "Shift Start",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
                     TextField(
                         controller: shiftEndController,
-                        decoration: const InputDecoration(labelText: "Shift End")),
-                    TextField(
-                        controller: imeiNoController,
-                        decoration: const InputDecoration(labelText: "IMEI No")),
-                    TextField(
-                        controller: lastDayController,
-                        decoration: const InputDecoration(labelText: "Last Working Date")),
+                       // readOnly: true,
+                        decoration: const InputDecoration(labelText: "Shift End",border: OutlineInputBorder())),
+                    SizedBox(height: 10,),
+
+
                     // Add more fields if needed
                   ],
                 ),
@@ -155,6 +265,9 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                     userImg: userImgController.text,
                     imeiNo: imeiNoController.text,
                     fullName: fullNameController.text,
+                    cityName: cityNameController.text,
+                    stateName: stateNameController.text,
+                    pinCode: pinCodeController.text,
                     userEmail: emailController.text,
                     userPhone: phoneController.text,
                     gender: genderController.text,
@@ -222,11 +335,14 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
     // Header Row
     sheet.appendRow([
       TextCellValue("UID"),
+      TextCellValue("Created Date"),
+      TextCellValue("Updated date"),
+      TextCellValue("City Name"),
       TextCellValue("User Id"),
       TextCellValue("Password"),
       TextCellValue("Full Name"),
       TextCellValue("Image"),
-      TextCellValue("Office Address"),
+      TextCellValue("Office Name"),
       TextCellValue("IMEI"),
       TextCellValue("Email Address"),
       TextCellValue("Contact Number"),
@@ -234,27 +350,43 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
       TextCellValue("Reporting Position Name"),
       TextCellValue("Reporting"),
       TextCellValue("Reporting Manager Name"),
+
+      TextCellValue("State Name"),
       TextCellValue("Full Address"),
+      TextCellValue("Pin Code"),
       TextCellValue("Distance"),
       TextCellValue("Office Lat"),
       TextCellValue("Office Lng"),
       TextCellValue("User Type"),
-      TextCellValue("Shift Start"),
-      TextCellValue("Shift End"),
+      // TextCellValue("Shift Start"),
+      // TextCellValue("Shift End"),
       TextCellValue("Date Of joining"),
       TextCellValue("Last Working Date"),
       TextCellValue("Current Status"),
-      TextCellValue("Role"),
-      TextCellValue("Created Date"),
-      TextCellValue("Updated date"),
+      //TextCellValue("Role"),
+
 
     ]);
 
     // 🔵 DATA ROWS
 // 🔵 DATA ROWS
     for (var u in users) {
+
       sheet.appendRow([
         TextCellValue(u.uid ?? ""),
+        TextCellValue(
+          u.createdAt != null
+              ? "${DateFormat('dd MMM yyyy').format(DateTime.parse(u.createdAt!))} "
+              "${DateFormat('hh:mm a').format(DateTime.parse(u.createdAt!))}"
+              : "",
+        ),
+        TextCellValue(
+          u.updatedAt != null
+              ? "${DateFormat('dd MMM yyyy').format(DateTime.parse(u.updatedAt!))} "
+              "${DateFormat('hh:mm a').format(DateTime.parse(u.updatedAt!))}"
+              : "",
+        ),
+        TextCellValue(u.cityName ?? ""),
         TextCellValue(u.userid ?? ""),
         TextCellValue(u.password ?? ""),
         TextCellValue(u.fullName ?? ""),
@@ -304,19 +436,21 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
             }
           })(),
         ),
+
+        TextCellValue(u.districtName ?? ""),
         TextCellValue(u.fullAddress ?? ""),
+        TextCellValue(u.pinCode ?? ""),
         TextCellValue(u.branchDistance ?? ""),
         TextCellValue(u.branchLat ?? ""),
         TextCellValue(u.branchLong ?? ""),
         TextCellValue(u.departmentName ?? ""),
-        TextCellValue(convertTo12Hour(u.shiftStart ?? "")),
-        TextCellValue(convertTo12Hour(u.shiftEnd ?? "")),
+        // TextCellValue(convertTo12Hour(u.shiftStart ?? "")),
+        // TextCellValue(convertTo12Hour(u.shiftEnd ?? "")),
         TextCellValue(u.dateOfJoining ?? ""),
         TextCellValue(u.lastworkingdate),
         TextCellValue(u.status ?? ""),
-        TextCellValue(u.role ?? ""),
-        TextCellValue(u.createdAt ?? ""),
-        TextCellValue(u.updatedAt ?? ""),
+        //TextCellValue(u.role ?? ""),
+
       ]);
     }
 
@@ -430,7 +564,6 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
       );
     }
   }
-
 
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
@@ -578,8 +711,12 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                               columns:  [
                                 DataColumn(label: Text("Action")),
                                 DataColumn(label: Text("UID")),
+                                DataColumn(label: Text("Create Date")),
+                                DataColumn(label: Text("Updated Date")),
+                                DataColumn(label: Text("City Name")),
                                 DataColumn(label: Text("UserID")),
                                 DataColumn(label: Text("Password")),
+                                DataColumn(label: Text("Full Name")),
                             DataColumn(
                               label: Row(
                                 children: [
@@ -598,14 +735,16 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                               ),
                             ),
                                 DataColumn(label: Text("Status")),
-                                DataColumn(label: Text("Full Name")),
+
                                 DataColumn(label: Text("Image")),
                                 DataColumn(label: Text("IMEI")),
-
                                 DataColumn(label: Text("Email")),
                                 DataColumn(label: Text("Phone")),
                                 DataColumn(label: Text("Gender")),
+
+                                DataColumn(label: Text("State Name")),
                                 DataColumn(label: Text("Address")),
+                                DataColumn(label: Text("Pin Code")),
                                 DataColumn(label: Text("Distance")),
                                 DataColumn(label: Text("Lat")),
                                 DataColumn(label: Text("Long")),
@@ -613,16 +752,21 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                 DataColumn(label: Text("Reporting")),
                                 DataColumn(label: Text("Reporting Manager Name")),
                                 DataColumn(label: Text("User Type")),
-                                DataColumn(label: Text("Shift Start")),
-                                DataColumn(label: Text("Shift End")),
+                                // DataColumn(label: Text("Shift Start")),
+                                // DataColumn(label: Text("Shift End")),
                                 DataColumn(label: Text("Joining Date")),
                                 DataColumn(label: Text("Last Working Date")),
 
-                                DataColumn(label: Text("Role")),
-                                DataColumn(label: Text("Created At")),
-                                DataColumn(label: Text("Updated At")),
+                               // DataColumn(label: Text("Role")),
+
                               ],
                               rows: paginatedUsers.map((u) {
+                                DateTime dt = DateTime.parse(u.createdAt);
+                                String formattedDate = DateFormat('dd MMM yyyy').format(dt);
+                                String formattedTime = DateFormat('hh:mm a').format(dt);
+                                DateTime udt = DateTime.parse(u.updatedAt);
+                                String formattedDateU = DateFormat('dd MMM yyyy').format(udt);
+                                String formattedTimeU = DateFormat('hh:mm a').format(udt);
                                 return DataRow(cells: [
                                   DataCell(Row(
                                     children: [
@@ -638,8 +782,29 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                   )),
                                   DataCell(Text(u.uid)),
                                  // DataCell(Text(u.cid)),
+                                  DataCell(Row(
+                                    children: [
+                                      Text(formattedDate),
+                                      Text(' - '),
+                                      Text(formattedTime)
+                                    ],
+                                  )),
+                                  DataCell(Row(
+                                    children: [
+                                      Text(formattedDateU),
+                                      Text(' - '),
+                                      Text(formattedTimeU)
+                                    ],
+                                  )),
+                                  DataCell(Text(u.cityName)),
                                   DataCell(Text(u.userid)),
                                   DataCell(Text(u.password)),
+                                  DataCell(Row(
+                                    children: [
+                                      Text(u.fullName),
+                                      Text(u.lastName),
+                                    ],
+                                  )),
                                   DataCell(Text(u.branchName)),
                                   DataCell(Text(
                                     u.status,
@@ -649,7 +814,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                           : Colors.red,
                                     ),
                                   )),
-                                  DataCell(Text(u.fullName)),
+
                                   //DataCell(Text(u.userToken)),
                                   DataCell(
                                     u.userImg != null &&
@@ -669,7 +834,10 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                   DataCell(Text(u.userEmail)),
                                   DataCell(Text(u.userPhone)),
                                   DataCell(Text(u.gender)),
+
+                                  DataCell(Text(u.districtName)),
                                   DataCell(Text(u.fullAddress)),
+                                  DataCell(Text(u.pinCode)),
                                   //DataCell(Text(u.branchId)),
                                   DataCell(Text(u.branchDistance)),
                                   DataCell(Text(u.branchLat)),
@@ -722,15 +890,14 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                   ),
                                   DataCell(Text(u.departmentName)),
                                   //DataCell(Text(u.shiftId)),
-                                  DataCell(Text(convertTo12Hour(u.shiftStart))),
-                                  DataCell(Text(convertTo12Hour(u.shiftEnd))),
+                                  // DataCell(Text(convertTo12Hour(u.shiftStart))),
+                                  // DataCell(Text(convertTo12Hour(u.shiftEnd))),
                                   DataCell(Text(u.dateOfJoining)),
                                   DataCell(Text(u.lastworkingdate)),
 
-                                  DataCell(Text(u.role)),
+                                  //DataCell(Text(u.role)),
 
-                                  DataCell(Text(u.createdAt)),
-                                  DataCell(Text(u.updatedAt)),
+
                                 ]);
                               }).toList(),
                             ),
