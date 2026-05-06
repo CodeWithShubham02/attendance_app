@@ -61,9 +61,9 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: LoginScreen(),
+      //home: LoginScreen(),
       //home: EmployeeHomeScreen(userModel: userModel,),
-     //home: AdminHomeScreen(cid: "1"),
+    home: AdminHomeScreen(cid: "1"),
     );
   }
 }

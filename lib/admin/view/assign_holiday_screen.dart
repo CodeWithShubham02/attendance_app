@@ -49,7 +49,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
     List<String> expectedHeaders = [
       "cid",
       "uid",
-      "name",
+      "userid",
       "user_type",
       "office_name",
       "status",
@@ -58,15 +58,26 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
       "shift_end"
     ];
 
-    // ✅ FILE HEADERS
-    final headers =
-    sheet.rows.first.map((e) => e?.value.toString().trim() ?? '').toList();
+    // Normalize
+    List<String> normalize(List<String> list) {
+      return list.map((e) => e.toLowerCase().trim()).toList();
+    }
 
-    // 🔥 CHECK HEADER MATCH
-    bool isValid = expectedHeaders.length == headers.length &&
-        expectedHeaders.every((h) => headers.contains(h));
+    final headers =
+    sheet.rows.first.map((e) => e?.value.toString() ?? '').toList();
+
+    final normalizedHeaders = normalize(headers);
+    final normalizedExpected = normalize(expectedHeaders);
+
+// Flexible validation
+    bool isValid = normalizedExpected.every(
+          (h) => normalizedHeaders.contains(h),
+    );
+
 
     if (!isValid) {
+      print("Expected: $normalizedExpected");
+      print("Found: $normalizedHeaders");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("❌ Something went wrong! Invalid Excel format")),
       );
@@ -113,6 +124,8 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
         ),
       );
     } catch (e) {
+      print("-----------------------");
+      print(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
@@ -151,7 +164,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
       sheet1.appendRow([
         TextCellValue("cid"),
         TextCellValue("uid"),
-        TextCellValue("name"),
+        TextCellValue("userid"),
         TextCellValue("user_type"),
         TextCellValue("office_name"),
         TextCellValue("status"),
@@ -166,11 +179,9 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
       sheet2.appendRow([
         TextCellValue("cid"),
         TextCellValue("uid"),
-        TextCellValue("agent_id"),
-        TextCellValue("agent_name"),
+        TextCellValue("userid"),
         TextCellValue("user_type"),
-        TextCellValue("site_name"),
-        TextCellValue("status"),
+        TextCellValue("office_name"),
       ]);
 
       // 🔥 API CALL
@@ -189,10 +200,8 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
           TextCellValue("${user['cid'] ?? ''}"),
           TextCellValue("${user['uid'] ?? ''}"),
           TextCellValue("${user['userid'] ?? ''}"),
-          TextCellValue("${user['full_name'] ?? ''}"),
-          TextCellValue("${user['user_type'] ?? ''}"),
+          TextCellValue("${user['department_name'] ?? ''}"),
           TextCellValue("${user['branch_name'] ?? ''}"),
-          TextCellValue("${user['status'] ?? ''}"),
         ]);
       }
 
@@ -251,7 +260,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                Image.asset("assets/image/img_2.png"),
+                Image.asset("assets/image/img_3.png"),
                 ElevatedButton.icon(
                   onPressed:downloadTemplate,
                   style: ElevatedButton.styleFrom(
@@ -291,13 +300,13 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                         SizedBox(height: 8),
                         Text("• cid – Company ID (Numeric)"),
                         Text("• uid – User ID (Numeric)"),
-                        Text("• name – Employee Name"),
+                        Text("• userid – jzx001"),
                         Text("• User Type – User Type Name"),
                         Text("• office_name – Office Name"),
-                        Text("• status – WO"),
+                        Text("• status – WO,Present,Absent"),
                         Text("• roster_date – DD-MM-YYYY"),
-                        Text("• shift_start – HH:MM (24 Hour)"),
-                        Text("• shift_end – HH:MM (24 Hour)"),
+                        Text("• shift_start – HH:MM AM (07:00 AM)"),
+                        Text("• shift_end – HH:MM PM (02:00 PM)"),
                         SizedBox(height: 6),
                         Text(
                           "⚠ Date & Time format strictly follow karein.",
