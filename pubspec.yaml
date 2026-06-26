@@ -56,7 +56,7 @@ dependencies:
   path_provider: ^2.1.2
   share_plus: ^7.2.1
   connectivity_plus:
-  file_picker:
+  file_picker: ^10.3.10
   flutter_polyline_points:
   flutter_local_notifications:
   image:
@@ -71,6 +71,9 @@ dependencies:
   fl_chart: ^0.68.0
   firebase_messaging:
   dropdown_search: ^5.0.6
+  googleapis_auth:
+  app_settings: ^7.0.0
+  multi_select_flutter:
 
 
 dev_dependencies:
@@ -82,7 +85,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
