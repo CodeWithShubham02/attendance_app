@@ -43,7 +43,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     print("cid : ${widget.cid}");
     print("uid : ${widget.uid}");
     final response = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_id.php"),
+      Uri.parse("http://15.206.209.30/attendance/fetch_attendance_by_id.php"),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
@@ -53,6 +53,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         "punch_in_time": dateKey(date),
       },
     );
+    print("-------------------");
     print("Api res : $response");
     print(response.body);
     if (response.statusCode == 200) {

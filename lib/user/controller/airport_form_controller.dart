@@ -4,7 +4,7 @@ import '../airport_form_model.dart';
 
 class AirportFormController {
   static const String apiUrl =
-      "https://fms.bizipac.com/apinew/attendance/add_report.php";
+      "http://15.206.209.30/attendance/add_report.php";
 
   static Future<bool> submitForm(AirportFormModel model) async {
     try {

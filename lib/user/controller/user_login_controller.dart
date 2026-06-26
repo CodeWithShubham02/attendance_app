@@ -4,9 +4,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:joizone/services/notification_service.dart';
 
 class UserController {
-  final String baseUrl = "https://fms.bizipac.com/apinew/attendance"; // emulator
+  final String baseUrl = "http://15.206.209.30/attendance"; // emulator
   // For real device → replace with your PC's IP
 
   // Get Android device ID
@@ -37,6 +38,7 @@ class UserController {
   }
   Future<String> getFcmToken() async {
     try {
+
       FirebaseMessaging messaging = FirebaseMessaging.instance;
 
       // Request permission (important for iOS)
@@ -52,31 +54,47 @@ class UserController {
       return "TOKEN_ERROR";
     }
   }
+
   Future<Map<String, dynamic>> loginUser({
     required String userid,
     required String password,
   }) async {
-    final imeiNo = await getDeviceId(); // fetch device ID
-    final fcmToken = await getFcmToken();
-    print("---------token--------------------");
-    print(fcmToken);
-    print("-----------------------------");
-    final response = await http.post(
-      Uri.parse("$baseUrl/user_login.php"),
-      headers: {"Content-Type": "application/x-www-form-urlencoded"},
-      body: {
-        "userid": userid,
-        "password": password,
-        "imei_no": imeiNo,
-        "user_token":fcmToken,
-      },
-    );
-
     try {
-      final data = json.decode(response.body);
-      return data; // {"status": true/false, "message": "...", "data": {...}}
+      final imeiNo = await getDeviceId();
+      final fcmToken = await getFcmToken();
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/user_login.php"),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: {
+          "userid": userid,
+          "password": password,
+          "imei_no": imeiNo,
+          "user_token":fcmToken.toString(),
+        },
+      );
+      print("-------------");
+      print(response);
+      print("Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+
+      return {
+        "status": false,
+        "message": "Server Error ${response.statusCode}"
+      };
     } catch (e) {
-      return {"status": false, "message": "Invalid response from server"};
+      print("Login Error: $e");
+
+      return {
+        "status": false,
+        "message": e.toString(),
+      };
     }
   }
 }

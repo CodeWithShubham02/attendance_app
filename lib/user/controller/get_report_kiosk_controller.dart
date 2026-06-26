@@ -5,7 +5,7 @@ import '../model/client_form_report_model.dart';
 
 class GetReportKioskController {
   static const String api =
-      "https://fms.bizipac.com/apinew/attendance/get_reports_by_kiosk.php";
+      "http://15.206.209.30/attendance/get_reports_by_kiosk.php";
 
   static Future<List<ClientFormReportModel>> fetchReports(
       String kioskName, String date) async {

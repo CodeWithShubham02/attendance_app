@@ -5,7 +5,7 @@ import '../model/attendance_record_model.dart';
 
 class AttendanceController {
   static const String _url =
-      "https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_kiosk.php";
+      "http://15.206.209.30/attendance/fetch_attendance_by_kiosk.php";
 
   static Future<List<Map<String, dynamic>>> fetchAttendance({
     required String officeName,

@@ -485,7 +485,6 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     };
   }
 
-
   Future<void> checkGpsAndAutoPunchOut() async {
     // ❌ DO NOT RUN IF CAMERA IS OPEN
     if (!isTrackingActive) return;
@@ -511,7 +510,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
       await http.post(
         Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
+          "http://15.206.209.30/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
         ),
         body: {
           "action": "punch_out",
@@ -564,7 +563,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
           final res = await http.post(
             Uri.parse(
-              "https://fms.bizipac.com/apinew/attendance/track_location.php",
+              "http://15.206.209.30/attendance/track_location.php",
             ),
             body: {
               "attendance_id": attendanceId!,
@@ -592,7 +591,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     // 2️⃣ Fetch employee shift from API
     final empRes = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_users.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_users.php"),
       body: {
         "uid": widget.userModel.uid,
         "cid": widget.userModel.cid,
@@ -606,10 +605,13 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       throw 'Employee not found';
     }
 
-    final shiftStart =
-    _timeToToday(widget.userModel.shiftStart); // "10:00"
-    final shiftEnd =
-    _timeToToday(widget.userModel.shiftEnd);   // "19:00"
+    DateTime shiftStart = _timeToToday(widget.userModel.shiftStart);
+    DateTime shiftEnd = _timeToToday(widget.userModel.shiftEnd);
+
+// Night shift fix
+    if (shiftEnd.isBefore(shiftStart)) {
+      shiftEnd = shiftEnd.add(const Duration(days: 1));
+    }
 
     // 3️⃣ Decide Present / Late
     final status = getPunchStatus(
@@ -625,7 +627,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     // 4️⃣ Call Punch-In API
     final res = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/attendance_punch_in.php"),
+      Uri.parse("http://15.206.209.30/attendance/attendance_punch_in.php"),
       body: {
         "uid": widget.userModel.uid,
         "cid": widget.userModel.cid,
@@ -691,7 +693,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     try {
       await http.post(
         Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/track_location.php",
+          "http://15.206.209.30/attendance/track_location.php",
         ),
         body: {
           "attendance_id": attendanceId!,
@@ -753,7 +755,7 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
       final res = await http.post(
         Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php"
+          "http://15.206.209.30/attendance/attendance_punch_out.php"
               "?attendance_id=$attendanceId",
         ),
         body: {

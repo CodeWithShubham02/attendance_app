@@ -7,12 +7,17 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:joizone/user/view/notification_screen.dart';
+import 'package:joizone/user/view/user_live_location_screen.dart';
 import 'package:joizone/user/view/userid_card_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import '../../admin/model/user_model.dart';
 import '../../admin/view/login_screen.dart';
+import '../../services/fcm_service.dart';
+import '../../services/get_server_key.dart';
+import '../../services/notification_service.dart';
 import '../controller/start_break_controller.dart';
 import '../view/punch_in_out_screen.dart';
 import '../view/user_attendance_screen.dart';
@@ -42,10 +47,21 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
   /* ---------------- INIT ---------------- */
   DateTime _currentTime = DateTime.now();
+  //user permission allow
+  NotificationService notificationService = NotificationService();
   @override
   void initState() {
     super.initState();
+    notificationService.requestNotificationPermission();
+    notificationService.getDeviceToken();
+    //FCMService.firebaseInit();
+    // notificationService.initLocalNotification(context);
+    //
+    notificationService.firebaseInit(context);
+    //
+    notificationService.setupInteractMessage(context);
     loadAttendanceId();
+
     loadLiveLocation();
     startGpsMonitor();
     startInternetMonitor(); // 🔥 ADD THIS
@@ -83,7 +99,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       if (!hasInternet && attendanceId != null) {
         // agar pehle se timer nahi chal raha
         if (internetOffTimer == null) {
-          internetOffTimer = Timer(const Duration(minutes: 4), () async {
+          internetOffTimer = Timer(const Duration(minutes: 5), () async {
             final stillNoInternet = await hasRealInternet();
 
             if (!stillNoInternet &&
@@ -104,7 +120,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                   builder: (_) => const AlertDialog(
                     title: Text("Internet Off"),
                     content: Text(
-                      "Internet was off for 4 minutes.\n"
+                      "Internet was off for 5 minutes.\n"
                           "You have been auto punched out.",
                     ),
                   ),
@@ -177,7 +193,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
     final res = await http.post(
       Uri.parse(
-        "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
+        "http://15.206.209.30/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
       ),
       body: {
         "action": "punch_out",
@@ -210,6 +226,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               (route) => false,
         );
       }
+      await sendFcmMessageWithOAuth(
+        widget.userModel.userToken,
+        "Internet turned off - Auto Punch Out",
+        "Aap Internet  off kiye the kuch time ke liye, isliye system ne aapka punch-out automatically kar diya hai.",
+      );
       debugPrint("✅ Offline punch-out synced");
     }
   }
@@ -233,7 +254,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         try {
           final response = await http.post(
             Uri.parse(
-              "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
+              "http://15.206.209.30/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
             ),
             body: {
               "action": "punch_out",
@@ -400,7 +421,9 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled && attendanceId != null) {
+
       await autoPunchOut("GPS Turn Off - Auto Punch");
+
       Get.offAll(()=>LoginScreen());
     }
   }
@@ -409,6 +432,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
   Future<void> autoPunchOut(String reason) async {
     try {
+      await sendFcmMessageWithOAuth(
+        widget.userModel.userToken,
+        "$reason",
+        "Aap allowed office location/radius se bahar chale gaye the, isliye system ne aapka punch-out automatically kar diya hai.",
+      );
       final prefs = await SharedPreferences.getInstance();
       final savedAttendanceId = prefs.getString('attendance_id');
 
@@ -419,7 +447,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
       final response = await http.post(
         Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
+          "http://15.206.209.30/attendance/attendance_punch_out.php?attendance_id=$savedAttendanceId",
         ),
         body: {
           "action": "punch_out",
@@ -478,7 +506,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       if (internet) {
         await http.post(
           Uri.parse(
-            "https://fms.bizipac.com/apinew/attendance/track_location.php",
+            "http://15.206.209.30/attendance/track_location.php",
           ),
           body: {
             "attendance_id": attendanceId!,
@@ -526,7 +554,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         isAutoPunching = true;
 
         await autoPunchOut("You are outside Kiosk radius");
-
+        // await sendFcmMessageWithOAuth(
+        //   widget.userModel.userToken,
+        //   "Auto Punch-Out",
+        //   "Aap kiosk radius ke bahar the, isliye system ne aapka punch-out automatically kar diya hai.",
+        // );
         if (mounted) {
           Get.offAll(() => LoginScreen());
         }
@@ -536,7 +568,87 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       debugPrint("❌ Distance check error: $e");
     }
   }
+  /**/
+  Future<void> sendFcmMessageWithOAuth(
+      String token,
+      String title,
+      String body,
+      ) async {
+    GetServerKey getServerKey = GetServerKey();
+    String? serverKey = await getServerKey.getServerKeyToken();
+    print("User Token Key: ${token}");
+    print("Server Key: ${serverKey}");
+    print("Notification Title: ${title}");
+    print("Notification Body: ${body}");
 
+    final response = await http.post(
+      Uri.parse(
+        "https://fcm.googleapis.com/v1/projects/joizone/messages:send",
+      ),
+      headers: {
+        "Authorization": "Bearer $serverKey",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: jsonEncode({
+        "message": {
+          "token": token,
+          "notification": {"title": title, "body": body},
+        },
+      }),
+    );
+    print("FCM Response: ${response.body}");
+
+    if (response.statusCode == 200) {
+      await saveNotification(
+        cid: widget.userModel.cid.toString() ?? '',
+        uid: widget.userModel.uid.toString() ?? '',
+        userName: widget.userModel.fullName.toString() ?? '',
+        branchName: widget.userModel.branchName.toString() ?? '',
+        title: title,
+        body: body,
+      );
+    }
+
+    setState(() {});
+  }
+  Future<void> saveNotification({
+    required String cid,
+    required String uid,
+    required String userName,
+    required String branchName,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      print("CID : $cid");
+      print("UID : $uid");
+      print("USER NAME : $userName");
+      print("BRANCH : $branchName");
+      final response = await http.post(
+        Uri.parse(
+          "http://15.206.209.30/attendance/save_notification.php",
+        ),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: {
+          "cid": cid,
+          "uid": uid,
+          "user_name": userName,
+          "branch_name": branchName,
+          "notification_title": title,
+          "notification_body": body,
+        },
+      );
+
+      print("Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+    } catch (e) {
+      print("Save Notification Error: $e");
+    }
+  }
+  /**/
   /* ---------------- UI ---------------- */
   bool isOnline = false;
   Timer? _timer;
@@ -673,6 +785,46 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         backgroundColor: Colors.blue,
         title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 22,fontFamily: 'impact'),),
         actions: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.white,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.notifications_active_outlined,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () {
+                    Get.to(
+                          () => NotificationScreen(
+                        cid: widget.userModel.cid,
+                        uid: widget.userModel.uid,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(width: 5,),
           attendanceId == null
               ? SizedBox.shrink()
               : Row(
@@ -760,11 +912,16 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
               ),
             ),
           ),
+          SizedBox(width: 5,),
           attendanceId == null
-              ?IconButton(
-            icon: const Icon(Icons.logout,color: Colors.white,),
-            onPressed: () => showLogoutDialog(context),
-          ): SizedBox.shrink(),
+              ?CircleAvatar(
+            radius: 20,
+                backgroundColor: Colors.white,
+                child: IconButton(
+                            icon: const Icon(Icons.logout,color: Colors.blue,),
+                            onPressed: () => showLogoutDialog(context),
+                          ),
+              ): SizedBox.shrink(),
           SizedBox(width: 10,)
         ],
       ),
@@ -821,7 +978,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                   ),
                 ),
                 Text(
-                  "1.0.3",
+                  "1.0.5",
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.normal,
@@ -834,6 +991,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
                   size: 10,
                   color: Colors.black,
                 ),
+               
               ],
             ),
 
@@ -844,6 +1002,36 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           ],
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton:
+      widget.userModel.departmentName == "Team Leader"
+          ? Padding(
+        padding: const EdgeInsets.only(bottom: 0,right: 10),
+        child: FloatingActionButton(
+          onPressed: () {
+            Get.to(
+                  () => UserLiveLocationScreen(
+                cid: widget.userModel.cid,
+                branch_name: widget.userModel.branchName,
+              ),
+            );
+          },
+          backgroundColor: Colors.grey.shade50,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(
+              color: Colors.blue,
+              width: 2,
+            ),
+          ),
+          child: const Icon(
+            Icons.location_on_outlined,
+            color: Colors.blue,
+          ),
+        ),
+      )
+          : null,
     );
   }
 

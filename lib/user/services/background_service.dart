@@ -64,7 +64,7 @@ void onStart(ServiceInstance service) async {
       print("📡 Sending: ${pos.latitude}, ${pos.longitude}");
 
       final response = await http.post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/track_location.php"),
+        Uri.parse("http://15.206.209.30/attendance/track_location.php"),
         body: {
           "attendance_id": attendanceId!,
           "lat": pos.latitude.toString(),
