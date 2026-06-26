@@ -507,7 +507,7 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
   Future<void> callDeleteApi(String uid) async {
     try {
       final url = Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/delete_user.php");
+          "http://15.206.209.30/attendance/delete_user.php");
 
       final response = await http.post(
         url,

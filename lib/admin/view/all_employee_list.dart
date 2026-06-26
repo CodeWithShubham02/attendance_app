@@ -530,7 +530,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
   Future<void> callDeleteApi(String uid) async {
     try {
       final url = Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/delete_user.php");
+          "http://15.206.209.30/attendance/delete_user.php");
 
       final response = await http.post(
         url,
@@ -651,6 +651,60 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
       end > filteredUsers.length ? filteredUsers.length : end,
     );
   }
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) {
+        return Dialog(
+          insetPadding: EdgeInsets.zero, // 🔥 full screen
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              // 🔍 Zoomable image
+              InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Center(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image,
+                      color: Colors.white,
+                      size: 80,
+                    ),
+                  ),
+                ),
+              ),
+
+              // ❌ Close button
+              Positioned(
+                top: 30,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -661,13 +715,21 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
       actions: [
         ElevatedButton(onPressed: (){
           Get.to(()=>InactiveUserScreen());
-        }, child: Text("Inactive Users")),
+        }, style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(5), // Perfect square corners
+          ),
+        ),child: Text("Inactive Users")),
         SizedBox(
           width: 10,
         ),
         ElevatedButton(onPressed: (){
           Get.to(()=>AddUserScreen());
-        }, child: Text("Create Users")),
+        }, style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(5), // Perfect square corners
+          ),
+        ),child: Text("Create Users")),
         IconButton(onPressed: (){
           //download the excel file
           downloadExcel();
@@ -817,17 +879,28 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
 
                                   //DataCell(Text(u.userToken)),
                                   DataCell(
-                                    u.userImg != null &&
-                                        u.userImg.toString().isNotEmpty
-                                        ? Image.network(
-                                      u.userImg,
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                      const Icon(Icons.broken_image),
-                                    )
-                                        : const Icon(Icons.image_not_supported),
+                                    GestureDetector(
+                                      onTap: () {
+                                        _showImageDialog(
+                                          context,
+                                          u.userImg,
+                                        );
+                                      },
+                                      child: u.userImg != null &&
+                                          u.userImg.toString().isNotEmpty
+                                          ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(
+                                          u.userImg,
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.broken_image),
+                                        ),
+                                      )
+                                          : const Icon(Icons.image_not_supported),
+                                    ),
                                   ),
                                   DataCell(Text(u.imeiNo)),
 

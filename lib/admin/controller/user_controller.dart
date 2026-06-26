@@ -7,7 +7,7 @@ import '../model/user_model.dart';
 
 class UserController {
   // ✅ Change URL based on platform
-  final String baseUrl = "https://fms.bizipac.com/apinew/attendance";
+  final String baseUrl = "http://15.206.209.30/attendance";
   // Android Emulator → http://10.0.2.2/joizone
   // Real device → http://YOUR_PC_IP/joizone
 
@@ -146,6 +146,25 @@ class UserController {
     }
     return [];
   }
+  Future<List<Map<String, dynamic>>> fetchUsersByCid(String cid) async {
+    final response = await http.get(
+      Uri.parse(
+        "http://15.206.209.30/attendance/get_users_cid.php?cid=$cid",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data['status'] == true) {
+        return List<Map<String, dynamic>>.from(data['data']);
+      }
+    }
+
+    return [];
+  }
+
+
   Future<List<UserModel>> fetchUsersInactive() async {
     final response = await http.get(
       Uri.parse("$baseUrl/get_user_inactive.php"),
@@ -241,7 +260,7 @@ class UserController {
   Future<void> callDeleteApi(String uid) async {
     try {
       final url = Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/delete_user.php?uid=$uid");
+          "http://15.206.209.30/attendance/delete_user.php?uid=$uid");
 
       final response = await http.get(url);
 

@@ -749,7 +749,11 @@ class _AddUserScreenState extends State<AddUserScreen> {
                     horizontal: 30,
                     vertical: 12,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5), // Perfect square corners
+                  ),
                 ),
+
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Create User"),

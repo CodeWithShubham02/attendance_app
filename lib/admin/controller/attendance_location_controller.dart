@@ -4,7 +4,7 @@ import '../model/attendance_location_model.dart';
 
 class AttendanceLocationService {
   static const String apiUrl =
-      "https://fms.bizipac.com/apinew/attendance/attendance_location_by_id.php";
+      "http://15.206.209.30/attendance/attendance_location_by_id.php";
 
   static Future<List<AttendanceLocationModel>> fetchByAttendanceId(
       String attendanceId) async {

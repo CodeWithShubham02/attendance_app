@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import '../controller/attendance_location_controller.dart';
 import '../controller/user_controller.dart';
 import '../model/user_model.dart';
+import '../notification/send_notification_screen.dart';
 import 'all_branch_screen.dart';
 import 'all_employee_attandance.dart';
 import 'all_employee_list.dart';
@@ -63,8 +64,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   String formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
-  int presentCount = 0;
-  int absentCount = 0;
+
 
   int maleCount = 0;
   int femaleCount = 0;
@@ -73,39 +73,57 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int reportNotFilled = 0;
   List reportList = [];
 
+  int presentCount = 0;
+  int absentCount = 0;
   Future<void> fetchAttendance() async {
-    final response = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_date.php"),
-      body: {
-        "cid": widget.cid,
-        "date": formatDate(DateTime.now()), // 🔥 dynamic date
-      },
-    );
+    try {
+      final response = await http.post(
+        Uri.parse("http://15.206.209.30/attendance/attedance_chart.php"),
+        body: {
+          "cid": widget.cid,
+          "date": formatDate(DateTime.now()),
+        },
+      );
 
-    final data = jsonDecode(response.body);
+      print(response.body);
 
-    int present = 0;
-    int absent = 0;
+      final jsonData = jsonDecode(response.body);
 
-    // 🔥 handle list response (most APIs return list)
-    if (data['data'] != null) {
-      for (var item in data['data']) {
-        if (item['status'] == "Present") {
-          present++;
-        } else {
-          absent++;
+      int present = 0;
+      int absent = 0;
+
+      if (jsonData['status'] == true &&
+          jsonData['data'] != null &&
+          jsonData['data'] is List) {
+
+        for (var item in jsonData['data']) {
+
+          String status = item['attendance_status']
+              .toString()
+              .trim()
+              .toUpperCase();
+
+          if (status == "PRESENT") {
+            present++;
+          } else {
+            absent++;
+          }
         }
       }
-    }
 
-    setState(() {
-      presentCount = present;
-      absentCount = absent;
-    });
+      setState(() {
+        presentCount = present;
+        absentCount = absent;
+      });
+
+    } catch (e) {
+      debugPrint("Attendance Error: $e");
+    }
   }
+
   Future<void> fetchUsers() async {
     final response = await http.get(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_users.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_users.php"),
     );
 
     final data = jsonDecode(response.body);
@@ -128,7 +146,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
   Future<void> fetchTodayReport() async {
     final response = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_report.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_report.php"),
       body: {
         "cid": widget.cid,
         "date": formatDate(DateTime.now()),
@@ -164,81 +182,200 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       reportList = tempList;
     });
   }
+
   Widget attendanceChart() {
     int total = presentCount + absentCount;
 
     return Card(
       elevation: 4,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("Today's Attendance"),
-          ),
-          SizedBox(
-            height: 180,
-            child: total == 0
-                ? const Center(child: Text("No Data"))
-                : PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    color: Colors.red,
-                    // value: presentCount.toDouble(),
-                    // title:
-                    // "Absent\n${((presentCount / total) * 100).toStringAsFixed(1)}%",
-                  ),
-                  PieChartSectionData(
-                    //value: absentCount.toDouble(),
-                     color: Colors.green,
-                    // title:
-                    // "Present\n${((absentCount / total) * 100).toStringAsFixed(1)}%",
-                  ),
-                ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            const Text(
+              "Today's Attendance",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          Text("Total Today Present Users : $total"),
-        ],
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              height: 200,
+              child: total == 0
+                  ? const Center(child: Text("No Data"))
+                  : PieChart(
+                PieChartData(
+                  centerSpaceRadius: 40,
+                  sections: [
+                    PieChartSectionData(
+                      value: presentCount.toDouble(),
+                      color: Colors.green,
+                      title: "$presentCount",
+                      radius: 70,
+                    ),
+                    PieChartSectionData(
+                      value: absentCount.toDouble(),
+                      color: Colors.red,
+                      title: "$absentCount",
+                      radius: 70,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text(
+                  "🟢 Present: $presentCount",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "🔴 Absent: $absentCount",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              "Total Users : $total",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
   Widget userChart() {
     int total = maleCount + femaleCount;
 
     return Card(
       elevation: 4,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("Employee Ratio"),
-          ),
-          SizedBox(
-            height: 180,
-            child: total == 0
-                ? const Center(child: Text("No Data"))
-                : PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    color: Colors.blue,
-                    value: maleCount.toDouble(),
-                    title:
-                    "Male\n${((maleCount / total) * 100).toStringAsFixed(1)}%",
-                  ),
-                  PieChartSectionData(
-                    color: Colors.pink,
-                    value: femaleCount.toDouble(),
-                    title:
-                    "Female\n${((femaleCount / total) * 100).toStringAsFixed(1)}%",
-                  ),
-                ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            const Text(
+              "",
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          Text("Total Users: $total"),
-        ],
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              height: 160,
+              child: total == 0
+                  ? const Center(
+                child: Text("No Data"),
+              )
+                  : PieChart(
+                PieChartData(
+                  centerSpaceRadius: 40,
+                  sectionsSpace: 2,
+                  sections: [
+                    PieChartSectionData(
+                      value: maleCount.toDouble(),
+                      color: Colors.blue,
+                      radius: 70,
+                      title:
+                      "${((maleCount / total) * 100).toStringAsFixed(0)}%",
+                      titleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    PieChartSectionData(
+                      value: femaleCount.toDouble(),
+                      color: Colors.pink,
+                      radius: 70,
+                      title:
+                      "${((femaleCount / total) * 100).toStringAsFixed(0)}%",
+                      titleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Male\n$maleCount",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      color: Colors.pink,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Female\n$femaleCount",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              "Total Employees : $total",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -257,34 +394,39 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     return kioskCount;
   }
-  List<PieChartSectionData> getSections(Map<String, int> data) {
-    int total = data.values.fold(0, (sum, val) => sum + val);
 
-    List<Color> colors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-    ];
-
-    int i = 0;
-
-    return data.entries.map((entry) {
-      final percent = (entry.value / total) * 100;
-
-      final section = PieChartSectionData(
-        color: colors[i % colors.length],
+  List<PieChartSectionData> getSections(
+      Map<String, int> kioskData,
+      int total,
+      ) {
+    return kioskData.entries.map((entry) {
+      return PieChartSectionData(
+        color: getKioskColor(entry.key),
         value: entry.value.toDouble(),
-        title: "${entry.key}\n${entry.value}",
-        radius: 60,
-        titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
+        radius: 70,
+        title:
+        "${((entry.value / total) * 100).toStringAsFixed(0)}%",
+        titleStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       );
-
-      i++;
-      return section;
     }).toList();
+  }
+  Color getKioskColor(String kiosk) {
+    switch (kiosk.toUpperCase()) {
+      case "AMDT1-LB":
+        return Colors.blue;
+      case "LKOT1-LG":
+        return Colors.orange;
+      case "BOMT2-LG":
+        return Colors.purple;
+      case "JAIT1-LG":
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
   Widget reportChart(List reports) {
     final kioskData = getKioskCounts(reports);
@@ -292,26 +434,79 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     return Card(
       elevation: 4,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("Kiosk Wise Reports"),
-          ),
-          SizedBox(
-            height: 220,
-            child: total == 0
-                ? const Center(child: Text("No Data"))
-                : PieChart(
-              PieChartData(
-                sections: getSections(kioskData),
-                sectionsSpace: 2,
-                centerSpaceRadius: 30,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            const Text(
+              "Kiosk Wise Reports",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          Text("Total Today Reports: $total"),
-        ],
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              height: 220,
+              child: total == 0
+                  ? const Center(
+                child: Text("No Data"),
+              )
+                  : PieChart(
+                PieChartData(
+                  centerSpaceRadius: 40,
+                  sectionsSpace: 2,
+                  sections: getSections(kioskData, total),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            Wrap(
+              spacing: 16,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: kioskData.entries.map((entry) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: getKioskColor(entry.key),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "${entry.key} (${entry.value})",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              "Total Reports : $total",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -337,32 +532,45 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         actions: [
           ElevatedButton(onPressed: (){
             Get.to(()=>AddBranchScreen(cid:widget.cid));
-          }, child: Text("Kiosk Master")),
+          },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5), // Perfect square corners
+                ),
+              ),child: Text("Kiosk Master")),
           SizedBox(
             width: 10,
           ),
           ElevatedButton(onPressed: (){
             Get.to(()=>ShiftScreen(cid:widget.cid));
-          }, child: Text("Shift Master")),
+          }, style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ),child: Text("Shift Master")),
           SizedBox(
             width: 10,
           ),
           ElevatedButton(onPressed: (){
             Get.to(()=>DepartmentScreen(cid: widget.cid));
-          }, child: Text("Designation")),
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Designation")),
           IconButton(
             icon: const Icon(Icons.refresh_outlined,color: Colors.white,),
             onPressed: () async {
               try {
                 final res = await http.get(
                   Uri.parse(
-                    'https://fms.bizipac.com/apinew/attendance/mark_absent.php',
+                    'http://15.206.209.30/attendance/mark_absent.php',
                   ),
                 );
 
                 if (res.statusCode == 200) {
                   final data = jsonDecode(res.body);
-
+                  print(data);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(data['message'] ?? 'Success'),
@@ -380,6 +588,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   );
                 }
               } catch (e) {
+                print(e.toString());
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Error: $e'),
@@ -394,68 +603,71 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Company ID: ${widget.cid}",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Company ID: ${widget.cid}",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
                   ),
-                ),
-                IconButton(onPressed: (){
-                  fetchAttendance();
-                  fetchTodayReport();
-                }, icon: Icon(Icons.refresh_outlined))
-              ],
-            ),
-            const SizedBox(height: 20),
-            Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: attendanceChart()),
-                    SizedBox(width: 10),
-                    Expanded(child: userChart()),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(child: reportChart(reportList)),
-                    SizedBox(width: 10),
-                    Expanded(child: SizedBox()),
-                  ],
-                ),
-              ],
-            )
-          ],
+                  IconButton(onPressed: (){
+                    fetchAttendance();
+                    fetchTodayReport();
+                  }, icon: Icon(Icons.refresh_outlined))
+                ],
+              ),
+              const SizedBox(height: 20),
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: attendanceChart()),
+                      SizedBox(width: 10),
+                      Expanded(child: userChart()),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(child: reportChart(reportList)),
+                      SizedBox(width: 10),
+                      Expanded(child: SizedBox()),
+                    ],
+                  ),
+                ],
+              )
+            ],
+          ),
         ),
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-
             // 🔵 HEADER
             UserAccountsDrawerHeader(
-              accountName: Text("Joizone"),
-              accountEmail: Text("joizone@gmail.com "),
-              currentAccountPicture: CircleAvatar(
+              decoration: BoxDecoration(
+                color: Colors.blue, // Change drawer header background color
+              ),
+              accountName: const Text("Joizone"),
+              accountEmail: const Text("joizone@gmail.com"),
+              currentAccountPicture: const CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Icon(Icons.person, size: 40),
               ),
             ),
-
             // 🟢 PROFILE
             ListTile(
               leading: Icon(Icons.person),
-              title: Text("Profile"),
+              title: Text("User Profile"),
               onTap: () {
                 Get.back();
                 Get.to(() => UsersTableScreen()); // change to ProfileScreen if you have
@@ -465,7 +677,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             // 🟢 ATTENDANCE
             ListTile(
               leading: Icon(Icons.calendar_today),
-              title: Text("Attendance"),
+              title: Text("Daily Attendance"),
               onTap: () {
                 Get.back();
                 Get.to(() => AllEmployeeAttendanceScreen(cid: widget.cid));
@@ -474,31 +686,38 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             // 🟢 LOCATION CAPTURING
             ListTile(
               leading: Icon(Icons.file_copy),
-              title: Text("Form"),
+              title: Text("Form Details"),
               onTap: () {
                 Get.back();
                 Get.to(()=>AllFormReportScreen());
               },
             ),
-            ListTile(
-              leading: Icon(Icons.file_copy),
-              title: Text("Upload Remark"),
-              onTap: () {
-                Get.back();
-                Get.to(()=>UploadRemarkScreen());
-              },
-            ),
+            // ListTile(
+            //   leading: Icon(Icons.file_copy),
+            //   title: Text("Upload Remark"),
+            //   onTap: () {
+            //     Get.back();
+            //     Get.to(()=>UploadRemarkScreen());
+            //   },
+            // ),
 
             // 🟢 LOCATION REPORT
             ListTile(
-              leading: Icon(Icons.map),
-              title: Text("Real Time Location"),
+              leading: Icon(Icons.location_on),
+              title: Text("Location History"),
               onTap: () {
                 Get.back();
                 Get.to(()=>LocationHistoryScreen(cid: widget.cid,));
               },
             ),
-
+            ListTile(
+              leading: Icon(Icons.notifications),
+              title: Text("Send Notifications"),
+              onTap: () {
+                Get.back();
+                Get.to(()=>SendNotificationScreen(cid: widget.cid,));
+              },
+            ),
             const Divider(),
 
             // 🔴 LOGOUT

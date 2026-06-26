@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:googleapis/shared.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -105,17 +107,26 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
   Future<void> sendToApi(List<Map<String, dynamic>> data) async {
     try {
       final res = await http.post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/user_holiday.php"),
+        Uri.parse("http://15.206.209.30/attendance/user_holiday.php"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"records": data}),
       );
-      print("----------------");
-      print(data);
-      print("----------------");
+      print("data : $data");
+
+      print("Status: ${res.statusCode}");
+      print("Body: ${res.body}");
+
+      if (res.statusCode != 200) {
+        throw Exception(
+          "Server Error ${res.statusCode}\n${res.body}",
+        );
+      }
+
+      if (res.body.trim().isEmpty) {
+        throw Exception("Empty response from server");
+      }
+
       final response = jsonDecode(res.body);
-      print("----------------");
-      print(response);
-      print("----------------");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(response['message'] ?? 'Upload completed'),
@@ -133,7 +144,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
   }
   Future<List<Map<String, dynamic>>> fetchUsers() async {
     final res = await http.get(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/get_users.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_users.php"),
     );
 
     final data = jsonDecode(res.body);
@@ -204,7 +215,25 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
           TextCellValue("${user['branch_name'] ?? ''}"),
         ]);
       }
+      final sheet3 = excel['status'];
 
+      List<String> roster_status = ['PRESENT', 'ABSENT', 'WO'];
+
+      sheet3.appendRow([
+        TextCellValue("status"),
+      ]);
+
+      if (roster_status.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No status data found")),
+        );
+      }
+
+      for (var status in roster_status) {
+        sheet3.appendRow([
+          TextCellValue(status),
+        ]);
+      }
       // ❗ Default "Sheet1" remove (important)
       excel.delete('Sheet1');
 
@@ -261,6 +290,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
               children: [
                 const SizedBox(height: 20),
                 Image.asset("assets/image/img_3.png"),
+                SizedBox(height: 10,),
                 ElevatedButton.icon(
                   onPressed:downloadTemplate,
                   style: ElevatedButton.styleFrom(
@@ -272,7 +302,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                       vertical: 15,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     textStyle: const TextStyle(
                       fontSize: 16,
@@ -334,7 +364,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                       vertical: 15,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     textStyle: const TextStyle(
                       fontSize: 16,

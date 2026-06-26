@@ -86,7 +86,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
     setState(() => isLoading = true);
 
     final url = Uri.parse(
-        "https://fms.bizipac.com/apinew/attendance/fetch_attendance_range.php?cid=${widget.cid}&from_date=${DateFormat('yyyy-MM-dd').format(fromDate)}&to_date=${DateFormat('yyyy-MM-dd').format(toDate)}");
+        "http://15.206.209.30/attendance/fetch_attendance_range.php?cid=${widget.cid}&from_date=${DateFormat('yyyy-MM-dd').format(fromDate)}&to_date=${DateFormat('yyyy-MM-dd').format(toDate)}");
 
     try {
       final response = await http.get(url);

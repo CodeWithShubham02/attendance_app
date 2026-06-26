@@ -4,7 +4,7 @@ import '../model/attendance_summary_model.dart';
 
 class AttendanceSummaryController {
   static const String url =
-      "https://fms.bizipac.com/apinew/attendance/attendance_summary_report.php";
+      "http://15.206.209.30/attendance/attendance_summary_report.php";
 
   static Future<List<AttendanceSummary>> fetchSummary({
     required String fromDate,

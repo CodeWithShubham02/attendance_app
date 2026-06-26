@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:joizone/admin/view/add_attedance.dart';
 import 'package:joizone/admin/view/shift_screen.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -16,6 +17,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'assign_holiday_screen.dart';
+import 'holiday_screen.dart';
 import 'monthly_attendance_screen.dart';
 import 'monthly_summary_screen.dart';
 
@@ -49,7 +51,7 @@ class _AllEmployeeAttendanceScreenState
     try {
       final response = await http.post(
         Uri.parse(
-            "https://fms.bizipac.com/apinew/attendance/fetch_attendance_by_date.php"),
+            "http://15.206.209.30/attendance/fetch_attendance_by_date.php"),
         body: {
           "cid": widget.cid,
           "date": dateKey(selectedDate),
@@ -255,7 +257,7 @@ class _AllEmployeeAttendanceScreenState
     try {
       final res = await http.post(
         Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/update_attendance_status.php",
+          "http://15.206.209.30/attendance/update_attendance_status.php",
         ),
         body: {
           "attendance_id": attendanceId,
@@ -478,21 +480,57 @@ class _AllEmployeeAttendanceScreenState
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("Daily Attendance",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            //Get.to(()=>AddAttedance(cid: widget.cid));
+            Get.to(()=>HolidayScreen(cid:widget.cid));
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Add WO")),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>AddAttedance(cid: widget.cid));
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Add Attedance")),
+          SizedBox(
+            width: 10,
+          ),
           ElevatedButton(onPressed: (){
             Get.to(()=>MonthlyAttendanceScreen(cid:widget.cid));
-          }, child: Text("Monthly  View")),
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Monthly  View")),
           SizedBox(
             width: 10,
           ),
           ElevatedButton(onPressed: (){
             Get.to(()=>AttendanceSummaryScreen());
-          }, child: Text("Summary View")),
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Summary View")),
           SizedBox(
             width: 10,
           ),
           ElevatedButton(onPressed: (){
             Get.to(()=>AssignHolidayScreen());
-          }, child: Text("Roster")),// Get.to(()=>ShiftScreen(cid:widget.cid));
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Roster")),// Get.to(()=>ShiftScreen(cid:widget.cid));
           SizedBox(
             width: 10,
           ),
@@ -690,7 +728,7 @@ class _AllEmployeeAttendanceScreenState
                               onPressed: () async{
                                 final id=e['id'];
                                 final res = await http.get(
-                                  Uri.parse("https://fms.bizipac.com/apinew/attendance/fetch_current_location.php?attendance_id=$id"),
+                                  Uri.parse("http://15.206.209.30/attendance/fetch_current_location.php?attendance_id=$id"),
                                 );
                                 print(res);
                                 final json = jsonDecode(res.body);
@@ -741,7 +779,7 @@ class _AllEmployeeAttendanceScreenState
                                   print(attendanceId);
 
                                   final res = await http.post(
-                                    Uri.parse("https://fms.bizipac.com/apinew/attendance/delete_attendance_by_id.php"),
+                                    Uri.parse("http://15.206.209.30/attendance/delete_attendance_by_id.php"),
                                     body: {
                                       "attendance_id": attendanceId,
                                     },

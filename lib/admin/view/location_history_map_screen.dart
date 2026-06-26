@@ -60,7 +60,7 @@ class _LocationHistoryMapScreenState
       String attendanceId) async {
     final response = await http.get(
       Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/fetch_location_history.php?attendance_id=$attendanceId"),
+          "http://15.206.209.30/attendance/fetch_location_history.php?attendance_id=$attendanceId"),
     );
 
     final data = jsonDecode(response.body);

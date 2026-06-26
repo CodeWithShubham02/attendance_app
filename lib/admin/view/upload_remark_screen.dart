@@ -1,12 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class UploadRemarkScreen extends StatefulWidget {
@@ -42,7 +38,7 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
     try {
 
       var response = await http.post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/update_excel_remark.php"),
+        Uri.parse("http://15.206.209.30/attendance/update_excel_remark.php"),
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json"
@@ -236,6 +232,11 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
             onPressed: () {
               pickExcelFile();
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5), // Perfect square corners
+              ),
+            ),
             child: const Text("Select Remark file"),
           ),
           const SizedBox(
@@ -245,6 +246,11 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
             onPressed: () {
               uploadExcelData();
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5), // Perfect square corners
+              ),
+            ),
             child: const Text('Upload Remark file'),
           ),
           const SizedBox(

@@ -8,6 +8,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
+import 'package:joizone/admin/view/upload_remark_screen.dart';
 import 'package:joizone/user/model/client_form_report_model.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_html/html.dart' as html;
@@ -686,7 +687,11 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         actions: [
           ElevatedButton(onPressed: (){
             Get.to(() => DuplicateFormScreen());
-          }, child: Text("Duplicate Form")),// Get.to(()=>ShiftScreen(cid:widget.cid));
+          }, style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ),child: Text("Duplicate Form")),// Get.to(()=>ShiftScreen(cid:widget.cid));
           SizedBox(
             width: 10,
           ),
@@ -703,6 +708,11 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
               }
               await exportReportsToExcel(context, reports);
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5), // Perfect square corners
+              ),
+            ),
             child: Row(
               children: [
                 Container(child: Text("Download Template")),
@@ -723,12 +733,27 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
               }
               await exportReportsToApprovedExcel(context, reports);
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5), // Perfect square corners
+              ),
+            ),
             child: Row(
               children: [
                 Container(child: Text("Post/Final Download")),
               ],
             ),
           ),
+          SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>UploadRemarkScreen());
+          }, style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ),child: Text("Upload Remark")),
           IconButton(
             onPressed: _pickDateAndFetchReports,
             icon: Icon(Icons.calendar_month, color: Colors.white),

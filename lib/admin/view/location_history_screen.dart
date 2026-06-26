@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -76,7 +77,7 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
 
     final response = await http.get(
       Uri.parse(
-          "https://fms.bizipac.com/apinew/attendance/location_history.php?uid=${selectedUser!.uid}&date=$formattedDate"),
+          "http://15.206.209.30/attendance/location_history.php?uid=${selectedUser!.uid}&date=$formattedDate"),
     );
 
     final data = jsonDecode(response.body);
@@ -106,7 +107,11 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
         actions: [
           ElevatedButton(onPressed: (){
             Get.to(()=>GoogleMapScreen(cid:widget.cid));
-          }, child: Text("Active User Map")),
+          },style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ), child: Text("Active User Map")),
           SizedBox(
             width: 10,
           ),
@@ -127,27 +132,37 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
             const SizedBox(height: 10),
 
             /// 🔽 User Dropdown
-            DropdownButtonFormField<UserModel>(
-              value: selectedUser,
-              isExpanded: true,
-              decoration: const InputDecoration(
+        DropdownSearch<UserModel>(
+          selectedItem: selectedUser,
+          items: users
+              .where((user) => user.status == "active")
+              .toList(),
+          itemAsString: (UserModel user) =>
+          "${user.userid} - ${user.fullName}",
+
+          popupProps: const PopupProps.menu(
+            showSearchBox: true,
+            searchFieldProps: TextFieldProps(
+              decoration: InputDecoration(
+                hintText: "Search User",
                 border: OutlineInputBorder(),
               ),
-              hint: const Text("Choose User"),
-              items: users.where((user) => user.status == "active").map((user) {
-                return DropdownMenuItem<UserModel>(
-                  value: user,
-                  child: Text(
-                    "${user.userid} - ${user.fullName}",
-                  ),
-                );
-              }).toList(),
-              onChanged: (UserModel? value) {
-                setState(() {
-                  selectedUser = value;
-                });
-              },
             ),
+          ),
+
+          dropdownDecoratorProps: const DropDownDecoratorProps(
+            dropdownSearchDecoration: InputDecoration(
+              labelText: "Choose User",
+              border: OutlineInputBorder(),
+            ),
+          ),
+
+          onChanged: (UserModel? value) {
+            setState(() {
+              selectedUser = value;
+            });
+          },
+        ),
 
             const SizedBox(height: 15),
 

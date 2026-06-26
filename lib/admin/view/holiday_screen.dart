@@ -9,7 +9,8 @@ import '../model/branch_model.dart';
 import '../model/user_model.dart';
 
 class HolidayScreen extends StatefulWidget {
-  const HolidayScreen({super.key});
+  final String cid;
+  const HolidayScreen({super.key, required this.cid});
 
   @override
   State<HolidayScreen> createState() => _HolidayScreenState();
@@ -29,6 +30,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
   final UserController controller = UserController();
   bool isUserLoading = true;
   List<UserModel> users = [];
+  List<UserModel> filteredUsers = [];
   String? selectedUserId;
   String? selectedUserName;
   String? selectedUserDepart;
@@ -44,11 +46,15 @@ class _HolidayScreenState extends State<HolidayScreen> {
 
   Future<void> loadUsers() async {
     users = await controller.fetchUsers();
-    setState(() => isLoading = false);
+
+    setState(() {
+      filteredUsers = users; // Initially all users
+      isLoading = false;
+    });
   }
 
   Future<void> loadBranches() async {
-    final list = await _controller.getBranches("1"); // cid = 1
+    final list = await _controller.getBranches(widget.cid); // cid = 1
 
     setState(() {
       branchList = list;
@@ -66,7 +72,8 @@ class _HolidayScreenState extends State<HolidayScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: Text("Holiday Assign", style: TextStyle(fontSize: 14)),
+        title: Text("Add Weekly Off Manually", style: TextStyle(fontSize: 18,color: Colors.white)),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -83,19 +90,30 @@ class _HolidayScreenState extends State<HolidayScreen> {
                         child: Text(branch.branchName),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      final branch = branchList.firstWhere(
-                        (b) => b.id == value,
-                      );
+              onChanged: (value) {
+                final branch = branchList.firstWhere(
+                      (b) => b.id == value,
+                );
 
-                      setState(() {
-                        selectedBranchId = branch.id;
-                        selectedBranchName = branch.branchName;
-                        selectedBranchLat = branch.lat;
-                        selectedBranchLong = branch.long;
-                        selectedBranchDistance = branch.distance;
-                      });
-                    },
+                setState(() {
+                  selectedBranchId = branch.id;
+                  selectedBranchName = branch.branchName;
+                  selectedBranchLat = branch.lat;
+                  selectedBranchLong = branch.long;
+                  selectedBranchDistance = branch.distance;
+
+                  // Branch Wise Filter
+                  filteredUsers = users
+                      .where((u) => u.branchId == branch.id)
+                      .toList();
+
+                  // Reset User Selection
+                  selectedUserId = null;
+                  selectedUserCid = null;
+                  selectedUserName = null;
+                  selectedUserDepart = null;
+                });
+              },
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                     ),
@@ -106,16 +124,18 @@ class _HolidayScreenState extends State<HolidayScreen> {
             child: DropdownButtonFormField<String>(
               value: selectedUserId,
               hint: const Text("Select User"),
-              items: users.map((user) {
+              items: filteredUsers.map((user) {
                 return DropdownMenuItem<String>(
-                  value: user.uid, // 👈 yahi actual userId hoga
-                  //child: Text(user.userid), // 👈 dropdown me jo dikhega
-                  // agar name dikhana ho:
-                  child: Text("${user.userid} - (${user.fullName})"),
+                  value: user.uid,
+                  child: Text(
+                    "${user.userid} - (${user.fullName})",
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
-                final user = users.firstWhere((b) => b.uid == value);
+                final user = filteredUsers.firstWhere(
+                      (u) => u.uid == value,
+                );
 
                 setState(() {
                   selectedUserId = user.uid;
@@ -124,7 +144,9 @@ class _HolidayScreenState extends State<HolidayScreen> {
                   selectedUserDepart = user.departmentName;
                 });
               },
-              decoration: const InputDecoration(border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+              ),
             ),
           ),
           Padding(

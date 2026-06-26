@@ -98,7 +98,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
       context: context,
       barrierDismissible: false, // prevents outside close
       builder: (_) => _shiftDialog(
-        title: "Add Shift 24 pr wise add shift",
+        title: "Add Shift 24hr pr wise add shift",
         onSave: () async {
           final success = await controller.addShift(
             widget.cid,

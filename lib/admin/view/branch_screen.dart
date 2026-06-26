@@ -56,7 +56,12 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
         actions: [
           ElevatedButton(onPressed: (){
             Get.to(()=>BranchListScreen(cid: widget.cid));
-          }, child: Text("All Kiosk"))
+          }, style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ),child: Text("All Kiosk")),
+          SizedBox(width: 20,)
         ],
       ),
       body: Padding(

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:joizone/admin/model/user_model.dart';
+import 'package:joizone/services/notification_service.dart';
 import 'package:joizone/user/controller/user_login_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final UserController userController=UserController();
   final TextEditingController userIdCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
-
+NotificationService notificationService=NotificationService();
   final TextEditingController userId = TextEditingController();
   final TextEditingController userPassword = TextEditingController();
   bool isLoading = false;
@@ -36,93 +37,116 @@ class _LoginScreenState extends State<LoginScreen> {
     // TODO: implement initState
     super.initState();
     checkLogin1();
+    notificationService.requestNotificationPermission();
   }
 
-
-
-
   void login() async {
-    if (userId.text.isEmpty || userPassword.text.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Enter all fields")));
-      return;
-    }
+    try {
+      if (userId.text.isEmpty || userPassword.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Enter all fields")),
+        );
+        return;
+      }
 
-    setState(() => isLoading = true);
+      setState(() => isLoading = true);
 
-    final result = await userController.loginUser(
-      userid: userId.text.trim(),
-      password: userPassword.text.trim(),
-    );
-
-    setState(() => isLoading = false);
-
-    if (result['status'] == true) {
-      // Login successful
-
-      final data = result['data'];
-      // Save UID in SharedPreferences
-      print("------data--------------------");
-      print(data);
-      print("--------------------------");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Welcome ${data['userid']}")),
+      final result = await userController.loginUser(
+        userid: userId.text.trim(),
+        password: userPassword.text.trim(),
       );
 
-      UserModel userModel=UserModel(
-        uid: data['uid'],
-        cid: data['cid'],
-        userid: data['userid'],
-        password: data['userPassword'],
-        userToken: data['user_token'],
-        userImg: data['userImg'] ?? '',  // ✅ FIX
-        imeiNo: data['imei_no'] ?? '',
-        fullName: data['userName'],
-        userEmail: data['userEmail'],
-        userPhone: data['userPhone'],
-        gender: data['userGender'],
-        fullAddress: data['full_address'],
-        branchId: data['storeId'],
-        branchName: data['storeName'],
-        branchDistance: data['storeDistance'],
-        branchLat: data['storeLat'],
-        branchLong: data['storeLong'],
-        departmentId: data['department_id'],
-        departmentName: data['department_name'],
-        shiftId: data['shift_id'],
-        shiftStart: data['shift_start'],
-        shiftEnd: data['shift_end'],
-        dateOfJoining: data['date_of_joining'],
-        lastworkingdate: data['last_working_date'] ?? '',
-        status: data['status'],
-        role: data['role'],
-        createdAt: data['createdAt'],
-        updatedAt: data['updatedAt'],
-        lastName: data['lastName'] ?? '',
-        middleName: data['middleName'] ?? '',
-        cityName: data['cityName'] ?? '',
-        pinCode:data['pinCode'] ?? '',
-        districtName: data['districtName'] ?? '',
-        reportingPosition: data['reportingPosition'] ?? '',
-      );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('uid', data['uid'].toString());
-      await prefs.setString('branchLat',userModel.branchLat);
-      await prefs.setString('branchLong',userModel.branchLong);
-      await prefs.setString('role', 'user');
-      final userJson = jsonEncode(userModel.toJson());
-      print("-----------------fgf-------------");
-      print(userJson);
-      print(userModel);
-      print("----------------fg--------------");
-      await prefs.setString('user_model', userJson);
-      // Navigate to your home screen
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EmployeeHomeScreen(userModel: userModel,)));
-    } else {
-      // Login failed
+      setState(() => isLoading = false);
+
+      if (result['status'] == true) {
+        final data = result['data'];
+
+        print("------data--------------------");
+        print(data);
+        print("-----------------------------");
+
+        UserModel userModel = UserModel(
+          uid: data['uid']?.toString() ?? '',
+          cid: data['cid']?.toString() ?? '',
+          userid: data['userid']?.toString() ?? '',
+          password: data['userPassword']?.toString() ?? '',
+          userToken: data['user_token']?.toString() ?? '',
+          userImg: data['userImg']?.toString() ?? '',
+          imeiNo: data['imei_no']?.toString() ?? '',
+          fullName: data['userName']?.toString() ?? '',
+          userEmail: data['userEmail']?.toString() ?? '',
+          userPhone: data['userPhone']?.toString() ?? '',
+          gender: data['userGender']?.toString() ?? '',
+          fullAddress: data['full_address']?.toString() ?? '',
+          branchId: data['storeId']?.toString() ?? '',
+          branchName: data['storeName']?.toString() ?? '',
+          branchDistance: data['storeDistance']?.toString() ?? '',
+          branchLat: data['storeLat']?.toString() ?? '',
+          branchLong: data['storeLong']?.toString() ?? '',
+          departmentId: data['department_id']?.toString() ?? '',
+          departmentName: data['department_name']?.toString() ?? '',
+          shiftId: data['shift_id']?.toString() ?? '',
+          shiftStart: data['shift_start']?.toString() ?? '',
+          shiftEnd: data['shift_end']?.toString() ?? '',
+          dateOfJoining: data['date_of_joining']?.toString() ?? '',
+          lastworkingdate: data['last_working_date']?.toString() ?? '',
+          status: data['status']?.toString() ?? '',
+          role: data['role']?.toString() ?? '',
+          createdAt: data['createdAt']?.toString() ?? '',
+          updatedAt: data['updatedAt']?.toString() ?? '',
+          lastName: data['lastName']?.toString() ?? '',
+          middleName: data['middleName']?.toString() ?? '',
+          cityName: data['cityName']?.toString() ?? '',
+          pinCode: data['pinCode']?.toString() ?? '',
+          districtName: data['districtName']?.toString() ?? '',
+          reportingPosition: data['reportingPosition']?.toString() ?? '',
+        );
+
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setString('uid', userModel.uid);
+        await prefs.setString('branchLat', userModel.branchLat);
+        await prefs.setString('branchLong', userModel.branchLong);
+        await prefs.setString('role', userModel.role);
+        await prefs.setString('userimg', userModel.userImg);
+        await prefs.setString(
+          'user_model',
+          jsonEncode(userModel.toJson()),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Welcome ${userModel.userid}"),
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmployeeHomeScreen(
+              userModel: userModel,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? "Login failed"),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      setState(() => isLoading = false);
+
+      print("LOGIN ERROR:");
+      print(e);
+      print(stackTrace);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? "Login failed")),
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -139,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<bool> isAttendanceActive(String attendanceId) async {
     try {
       final response = await http.post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/check_status.php"),
+        Uri.parse("http://15.206.209.30/attendance/check_status.php"),
         body: {
           "attendance_id": attendanceId,
         },
@@ -244,11 +268,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
 
   Future<void> loginAdmin() async {
-    //await connectDriveAndSave("123");
+
     setState(() => isLoading = true);
 
     final response = await http.post(
-      Uri.parse("https://fms.bizipac.com/apinew/attendance/login.php"), // localhost fix
+      Uri.parse("http://15.206.209.30/attendance/login.php"), // localhost fix
       body: {
         "user_id": userIdCtrl.text,
         "password": passwordCtrl.text,
@@ -403,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   vertical: 15,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 textStyle: const TextStyle(
                   fontSize: 16,
@@ -424,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   vertical: 15,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 textStyle: const TextStyle(
                   fontSize: 16,

@@ -6,7 +6,7 @@ import 'package:joizone/user/model/client_form_report_model.dart';
 class ReportController {
 
   static const String apiUrl =
-      "https://fms.bizipac.com/apinew/attendance/get_report.php";
+      "http://15.206.209.30/attendance/get_report.php";
 
   static Future<List<ClientFormReportModel>> fetchReports() async {
     try {
@@ -34,7 +34,7 @@ class ReportController {
   }
   static Future<List<ClientFormReportModel>> fetchReportDuplicate() async {
     try {
-      final response = await http.get(Uri.parse("https://fms.bizipac.com/apinew/attendance/get_duplicate_form.php"));
+      final response = await http.get(Uri.parse("http://15.206.209.30/attendance/get_duplicate_form.php"));
 
       if (response.statusCode == 200) {
 
@@ -91,7 +91,7 @@ class ReportController {
     try {
       final response = await http
           .post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/update_form.php"),
+        Uri.parse("http://15.206.209.30/attendance/update_form.php"),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
@@ -129,7 +129,7 @@ class ReportController {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse("https://fms.bizipac.com/apinew/attendance/update_forms.php"),
+        Uri.parse("http://15.206.209.30/attendance/update_forms.php"),
         body: {
           "id": id.toString(),
           "application_no": applicationNo,
