@@ -7,6 +7,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:joizone/chatbot/chatbot_screen.dart';
 import 'package:joizone/user/view/notification_screen.dart';
 import 'package:joizone/user/view/user_live_location_screen.dart';
 import 'package:joizone/user/view/userid_card_widget.dart';
@@ -785,6 +786,31 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         backgroundColor: Colors.blue,
         title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 22,fontFamily: 'impact'),),
         actions: [
+          // Stack(
+          //   children: [
+          //     CircleAvatar(
+          //       radius: 20,
+          //       backgroundColor: Colors.white,
+          //       child: IconButton(
+          //         icon: const Icon(
+          //           Icons.chat,
+          //           color: Colors.blue,
+          //         ),
+          //         onPressed: () {
+          //           Get.to(
+          //                 () => ChatbotScreen(
+          //               cid: widget.userModel.cid,
+          //               uid: widget.userModel.uid,
+          //                   name: widget.userModel.fullName,
+          //                   branchName: widget.userModel.branchName,
+          //             ),
+          //           );
+          //         },
+          //       ),
+          //     ),
+          //   ],
+          // ),
+          SizedBox(width: 5,),
           Stack(
             children: [
               CircleAvatar(

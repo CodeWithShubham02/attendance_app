@@ -63,6 +63,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
       );
 
       filteredRecords = List.from(attendanceRecords);
+
     } catch (e) {
       debugPrint("Attendance error: $e");
     } finally {
@@ -139,9 +140,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
               ),
               columns: const [
                 DataColumn(label: Text("Name")),
-
                 DataColumn(label: Text("Status")),
-
                 DataColumn(label: Text("Punch In")),
                 DataColumn(label: Text("Punch Out")),
                 // DataColumn(label: Text("Punch In Remark")),
@@ -153,6 +152,7 @@ class _OfficeAttendanceScreenState extends State<OfficeAttendanceScreen> {
 
               ],
               rows: filteredRecords.map((r) {
+
                 return DataRow(cells: [
                   DataCell(Text(r['name'] ?? "-")),
 

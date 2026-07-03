@@ -1,5 +1,6 @@
 class AirportFormModel {
   String uid;
+  String cid;
   String userId;
   String userName;
   String cityName;
@@ -16,6 +17,7 @@ class AirportFormModel {
 
   AirportFormModel({
     required this.uid,
+    required this.cid,
     required this.userId,
     required this.userName,
     required this.cityName,
@@ -33,6 +35,7 @@ class AirportFormModel {
   Map<String, dynamic> toJson() {
     return {
       "uid": uid,
+      "cid": cid,
       "user_id": userId,
       "user_name": userName,
       "city_name": cityName,
@@ -51,6 +54,7 @@ class AirportFormModel {
   Map<String, dynamic> toMap() {
     return {
       "uid": uid,
+      "cid": cid,
       "user_id": userId,
       "user_name": userName,
       "city_name": cityName,

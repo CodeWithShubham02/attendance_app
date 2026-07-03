@@ -231,7 +231,11 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
     required double lat,
     required double lng,
   }) async {
-    final image = img.decodeImage(imageBytes)!;
+    final image = img.decodeImage(imageBytes);
+
+    if (image == null) {
+      throw Exception("Unable to decode image");
+    }
 
     final dateTime =
     DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now());
@@ -240,25 +244,22 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
 
     final watermarkText = '$address\n$dateTime';
 
-    final font = img.arial48; // 🔥 BIG FONT
+    final font = img.arial48;
     const padding = 20;
 
-    // ---- TEXT SIZE ESTIMATION ----
     final lines = watermarkText.split('\n');
     final maxLineLength =
     lines.map((e) => e.length).reduce((a, b) => a > b ? a : b);
 
-    const approxCharWidth = 28; // for arial48
+    const approxCharWidth = 28;
     const approxLineHeight = 55;
 
     final textWidth = maxLineLength * approxCharWidth;
     final textHeight = lines.length * approxLineHeight;
 
-    // ---- BOTTOM RIGHT POSITION ----
     final x = image.width - textWidth - padding;
     final y = image.height - textHeight - padding;
 
-    // 🖤 BLACK BACKGROUND
     img.fillRect(
       image,
       x1: x - 15,
@@ -268,7 +269,6 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       color: img.ColorRgb8(0, 0, 0),
     );
 
-    // 🤍 WHITE TEXT
     img.drawString(
       image,
       watermarkText,
@@ -286,7 +286,6 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
   final ImagePicker _picker = ImagePicker();
   Future<String?> pickImagePhoto1(ImageSource source) async {
     try {
-      // 🛑 STOP tracking before camera
       isTrackingActive = false;
       locationTimer?.cancel();
 
@@ -299,21 +298,26 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
       );
 
       if (picked == null) {
-        // ▶️ Resume tracking if user cancels
         isTrackingActive = true;
         startLocationTracking();
         return null;
       }
 
+      debugPrint("Image Path: ${picked.path}");
+
       final rawBytes = await picked.readAsBytes();
+      debugPrint("Image Size: ${rawBytes.length}");
 
       final position = await _getCurrentLocation();
+      debugPrint("Location: ${position.latitude}, ${position.longitude}");
 
       final watermarkedBytes = await addWatermark(
         imageBytes: rawBytes,
         lat: position.latitude,
         lng: position.longitude,
       );
+
+      debugPrint("Watermark Added");
 
       final fileName =
           "uploads/image_${DateTime.now().millisecondsSinceEpoch}.jpg";
@@ -324,21 +328,28 @@ class _PunchInOutScreenState extends State<PunchInOutScreen> {
         objectKey: fileName,
       );
 
-      photoUrl = imageUrl;
+      debugPrint("Upload Success: $imageUrl");
 
-      // ▶️ RESTART tracking after camera
+      setState(() {
+        photoUrl = imageUrl;
+      });
+
       isTrackingActive = true;
       startLocationTracking();
 
       return imageUrl;
+    } catch (e, stackTrace) {
+      debugPrint("Image Upload Error: $e");
+      debugPrintStack(stackTrace: stackTrace);
 
-    } catch (e) {
-      // ▶️ Always restart tracking
       isTrackingActive = true;
       startLocationTracking();
+
       return null;
     } finally {
-      setState(() => isLoadingPhoto = false);
+      if (mounted) {
+        setState(() => isLoadingPhoto = false);
+      }
     }
   }
 

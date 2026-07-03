@@ -172,6 +172,7 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
 
       final model = AirportFormModel(
         uid: widget.userModel.uid,
+        cid: widget.userModel.cid,
         userId: widget.userModel.userid,
         userName: widget.userModel.fullName,
         cityName: widget.userModel.branchName,
@@ -227,7 +228,10 @@ class _AirportFormScreenState extends State<AirportFormScreen> {
           color: Colors.white, // 🔥 icon color
         ),
         backgroundColor: Colors.blue,
-        title: const Text("Client Form",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),),
+        title: const Text("Client Form",
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,fontFamily: 'impact'),),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

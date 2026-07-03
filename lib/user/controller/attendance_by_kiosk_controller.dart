@@ -20,6 +20,14 @@ class AttendanceController {
         "to_date": toDate,
       },
     );
+    print("====================");
+    print("====================");
+    print(res);
+    print(officeName);
+    print(fromDate);
+    print(toDate);
+    print("====================");
+    print("====================");
 
     final json = jsonDecode(res.body);
     final response = AttendanceResponse.fromJson(json);
