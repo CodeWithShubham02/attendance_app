@@ -45,7 +45,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
   }
 
   Future<void> loadUsers() async {
-    users = await controller.fetchUsers();
+    users = (await controller.fetchUsersByCid(widget.cid)).cast<UserModel>();
 
     setState(() {
       filteredUsers = users; // Initially all users
@@ -71,6 +71,17 @@ class _HolidayScreenState extends State<HolidayScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         title: Text("Add Weekly Off Manually", style: TextStyle(fontSize: 18,color: Colors.white)),
         iconTheme: IconThemeData(color: Colors.white),

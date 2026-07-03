@@ -57,7 +57,7 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                     TextField(
                       controller: searchController,
                       decoration: const InputDecoration(
-                        hintText: "Search Employee",
+                        hintText: "Search Employee - name, branch, userid",
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) {
@@ -72,11 +72,15 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                                 ?.toString()
                                 .toLowerCase() ??
                                 '';
+                            final empBranch = user['branch_name']
+                                ?.toString()
+                                .toLowerCase() ??
+                                '';
 
                             return name.contains(
                                 value.toLowerCase()) ||
                                 empId.contains(
-                                    value.toLowerCase());
+                                    value.toLowerCase())|| empBranch.contains(value.toLowerCase());
                           }).toList();
                         });
                       },
@@ -194,18 +198,24 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
     try {
       final title = titleController.text.trim();
       final body = bodyController.text.trim();
-
+      debugPrint("=======Notification Title/Body=======");
+      debugPrint(title);
+      debugPrint(body);
       final totalUsers = selectedUsers.length;
 
       for (var user in selectedUsers) {
         String token = user['user_token'] ?? '';
-
+        debugPrint("=======User Token=======");
+        debugPrint(token);
         if (token.isNotEmpty) {
           bool sent = await sendFcmMessageWithOAuth(
             token,
             title,
             body,
           );
+
+          debugPrint("=======Send Notification Status=======");
+          debugPrint(sent as String?);
 
           if (sent) {
             await saveNotification(
@@ -245,7 +255,8 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
       String body,
       ) async {
     String? serverKey = await getServerKey.getServerKeyToken();
-
+    debugPrint("======= Server Key =======");
+    debugPrint(serverKey);
     final response = await http.post(
       Uri.parse(
         "https://fcm.googleapis.com/v1/projects/joizone/messages:send",
@@ -264,9 +275,9 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
         },
       }),
     );
-
+    debugPrint("======= FCM Response =======");
     print("FCM Response: ${response.body}");
-
+    print("FCM Response: ${response.statusCode == 200}");
     return response.statusCode == 200;
   }
 
@@ -310,7 +321,18 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Color(0xff2563EB),
         title: Text("Send Notification",style: TextStyle(color: Colors.white),),
         iconTheme: IconThemeData(color: Colors.white),
       ),
@@ -356,7 +378,7 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: Icon(Icons.title, color: Colors.blue),
+                  prefixIcon: Icon(Icons.title, color: Color(0xff2563EB)),
                 ),
               ),
             ),
@@ -369,24 +391,24 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
               ),
               child: TextField(
                 controller: bodyController,
-                maxLines: 2,
+                maxLines: 4,
                 decoration: InputDecoration(
                   labelText: "Message Body",
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: Icon(Icons.message, color: Colors.blue),
+                  prefixIcon: Icon(Icons.message, color: Color(0xff2563EB)),
                 ),
               ),
             ),
 
             // 🔹 Send Message Button
             SizedBox(
-              width: double.infinity,
+              width: 200,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xff2563EB),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

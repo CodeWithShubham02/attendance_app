@@ -271,6 +271,17 @@ class _LocationHistoryMapScreenState
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme:
         const IconThemeData(color: Colors.white),

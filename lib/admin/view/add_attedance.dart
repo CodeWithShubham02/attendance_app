@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
@@ -8,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../controller/user_controller.dart';
 import '../model/user_model.dart';
 import 'package:http/http.dart' as http;
+
 
 class AddAttedance extends StatefulWidget {
   final String cid;
@@ -44,8 +46,8 @@ class _AddAttedanceState extends State<AddAttedance> {
     final date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
+      firstDate: DateTime.now().subtract(const Duration(days: 1)), // Yesterday
+      lastDate: DateTime.now(),
     );
 
     if (date == null) return null;
@@ -126,6 +128,17 @@ class _AddAttedanceState extends State<AddAttedance> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         title: Text(
           "Add Attendance Manually",
@@ -139,39 +152,47 @@ class _AddAttedanceState extends State<AddAttedance> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                DropdownButtonFormField<Map<String, dynamic>>(
-                  decoration: const InputDecoration(
-                    labelText: "Select Employee",
-                    border: OutlineInputBorder(),
-                  ),
-                  value: selectedUser,
-                  items: users.map((user) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: user,
-                      child: Text(
-                        "${user['userid']} - ${user['full_name']}",
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedUser = value;
-                    });
+                DropdownSearch<Map<String, dynamic>>(
+            items: users,
+            selectedItem: selectedUser,
+            itemAsString: (user) =>
+            "${user['userid']} - ${user['full_name']}",
 
-                    print("UID : ${value?['uid']}");
-                    print("USER ID : ${value?['userid']}");
-                    print("FULL NAME : ${value?['full_name']}");
-                    print("SHIFT START : ${value?['shift_start']}");
-                    print("SHIFT END : ${value?['shift_end']}");
-                    print("DEPARTMENT: ${value?['department_name']}");
-                    print("BRANCH : ${value?['branch_name']}");
-                    print("BRANCH LAT : ${value?['branch_lat']}");
-                    print("BRANCH LONG : ${value?['branch_long']}");
-                    print("BRANCH DISTANCE : ${value?['branch_distance']}");
-                  },
+                dropdownDecoratorProps: const DropDownDecoratorProps(
+                  dropdownSearchDecoration: InputDecoration(
+                labelText: "Select Employee",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            popupProps: const PopupProps.menu(
+              showSearchBox: true,
+              searchFieldProps: TextFieldProps(
+                decoration: InputDecoration(
+                  hintText: "Search employee...",
+                  prefixIcon: Icon(Icons.search),
                 ),
+              ),
+            ),
 
+            onChanged: (value) {
+              setState(() {
+                selectedUser = value;
+              });
 
+              print("UID : ${value?['uid']}");
+              print("USER ID : ${value?['userid']}");
+              print("FULL NAME : ${value?['full_name']}");
+              print("SHIFT START : ${value?['shift_start']}");
+              print("SHIFT END : ${value?['shift_end']}");
+              print("DEPARTMENT : ${value?['department_name']}");
+              print("BRANCH : ${value?['branch_name']}");
+              print("BRANCH LAT : ${value?['branch_lat']}");
+              print("BRANCH LONG : ${value?['branch_long']}");
+              print("BRANCH DISTANCE : ${value?['branch_distance']}");
+            },
+
+            compareFn: (item1, item2) => item1['uid'] == item2['uid'],
+            ),
                 const SizedBox(height: 20),
                 Column(
                   children: [

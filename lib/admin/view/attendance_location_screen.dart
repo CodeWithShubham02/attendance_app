@@ -168,7 +168,18 @@ class _AttendanceRouteMapScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Real Time Location Tracking"),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
+        title: const Text("Real Time Location Tracking",style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.blue,
       ),
       body: Column(

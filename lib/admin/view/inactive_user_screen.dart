@@ -19,7 +19,8 @@ import '../controller/user_controller.dart';
 import '../model/user_model.dart';
 import 'package:http/http.dart' as http;
 class InactiveUserScreen extends StatefulWidget {
-  const InactiveUserScreen({super.key});
+  final String cid;
+  const InactiveUserScreen({super.key, required this.cid});
 
   @override
   State<InactiveUserScreen> createState() => _InactiveUserScreenState();
@@ -38,7 +39,7 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
   }
 
   Future<void> loadUsers() async {
-    users = await controller.fetchUsersInactive();
+    users = await controller.fetchUsersInactive(widget.cid);
     filteredUsers = users;
 
     branchList = users
@@ -619,14 +620,26 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
-        title: const Text("All Inactive Users",style: TextStyle(color: Colors.white),),
+        title: const Text("All Users",style: TextStyle(color: Colors.white),),
         actions: [
           IconButton(onPressed: (){
             //download the excel file
             downloadExcel();
-          }, icon:Icon(Icons.download))
+          }, icon:Icon(Icons.download)),
+          SizedBox(width: 20,),
         ],),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -709,13 +722,13 @@ class _InactiveUserScreenState extends State<InactiveUserScreen> {
                       DataCell(Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            icon: const Icon(Icons.edit, color:  Color(0xff2563EB)),
                             onPressed: () => editUser(u),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => deleteUser(u),
-                          ),
+                          // IconButton(
+                          //   icon: const Icon(Icons.delete, color: Colors.red),
+                          //   onPressed: () => deleteUser(u),
+                          // ),
                         ],
                       )),
                       DataCell(Text(u.uid)),

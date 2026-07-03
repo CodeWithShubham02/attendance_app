@@ -23,7 +23,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String selectedRole = 'user';
+  String selectedRole = 'admin';
   final UserController userController=UserController();
   final TextEditingController userIdCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
@@ -305,6 +305,17 @@ NotificationService notificationService=NotificationService();
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xff2563EB),
+                  Color(0xff1D4ED8),
+                ],
+              ),
+            ),
+          ),
           backgroundColor: Colors.blue,
           centerTitle: true,
           title: Text("Login",style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),)),
@@ -419,7 +430,7 @@ NotificationService notificationService=NotificationService();
             selectedRole=='admin'?ElevatedButton(
               onPressed: isLoading ? null : loginAdmin,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xff2563EB),
                 foregroundColor: Colors.white,
                 elevation: 5,
                 padding: const EdgeInsets.symmetric(
@@ -440,7 +451,7 @@ NotificationService notificationService=NotificationService();
             ):ElevatedButton(
               onPressed: isLoading ? null : login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xff2563EB),
                 foregroundColor: Colors.white,
                 elevation: 5,
                 padding: const EdgeInsets.symmetric(

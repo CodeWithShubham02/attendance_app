@@ -19,7 +19,8 @@ import '../controller/user_controller.dart';
 import '../model/user_model.dart';
 import 'package:http/http.dart' as http;
 class UsersTableScreen extends StatefulWidget {
-  const UsersTableScreen({super.key});
+  final String cid;
+  const UsersTableScreen({super.key, required this.cid});
 
   @override
   State<UsersTableScreen> createState() => _UsersTableScreenState();
@@ -38,7 +39,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
   }
 
   Future<void> loadUsers() async {
-    users = await controller.fetchUsers();
+    users = await controller.fetchUsersByCid1(widget.cid);
     filteredUsers = users;
 
     branchList = users
@@ -709,31 +710,44 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
           backgroundColor: Colors.blue,
           iconTheme: IconThemeData(color: Colors.white),
-          title: const Text("All Users",style: TextStyle(color: Colors.white),),
+          title: const Text("All Active Users",style: TextStyle(color: Colors.white),),
       actions: [
         ElevatedButton(onPressed: (){
-          Get.to(()=>InactiveUserScreen());
+          Get.to(()=>InactiveUserScreen(cid: widget.cid,));
         }, style: ElevatedButton.styleFrom(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5), // Perfect square corners
           ),
-        ),child: Text("Inactive Users")),
+        ),child: Text("All Users")),
         SizedBox(
           width: 10,
         ),
         ElevatedButton(onPressed: (){
-          Get.to(()=>AddUserScreen());
+          Get.to(()=>AddUserScreen(cid:widget.cid));
         }, style: ElevatedButton.styleFrom(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5), // Perfect square corners
           ),
         ),child: Text("Create Users")),
+        SizedBox(width: 10,),
         IconButton(onPressed: (){
           //download the excel file
           downloadExcel();
-        }, icon:Icon(Icons.download))
+        }, icon:Icon(Icons.download,color: Colors.white,)),
+        SizedBox(width: 10,)
       ],),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -788,7 +802,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                       Icons.filter_list,
                                       size: 18,
                                       color: selectedBranches.isNotEmpty
-                                          ? Colors.blue
+                                          ?  Color(0xff2563EB)
                                           : Colors.grey,
                                     ),
                                     onPressed: showBranchFilter,
@@ -833,13 +847,13 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                   DataCell(Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
+                                        icon: const Icon(Icons.edit, color:  Color(0xff2563EB)),
                                         onPressed: () => editUser(u),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => deleteUser(u),
-                                      ),
+                                      // IconButton(
+                                      //   icon: const Icon(Icons.delete, color: Colors.red),
+                                      //   onPressed: () => deleteUser(u),
+                                      // ),
                                     ],
                                   )),
                                   DataCell(Text(u.uid)),
@@ -874,6 +888,7 @@ class _UsersTableScreenState extends State<UsersTableScreen> {
                                       color: u.status.toLowerCase() == 'active'
                                           ? Colors.green
                                           : Colors.red,
+                                      fontWeight: FontWeight.bold
                                     ),
                                   )),
 

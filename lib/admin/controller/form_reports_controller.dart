@@ -8,9 +8,9 @@ class ReportController {
   static const String apiUrl =
       "http://15.206.209.30/attendance/get_report.php";
 
-  static Future<List<ClientFormReportModel>> fetchReports() async {
+  static Future<List<ClientFormReportModel>> fetchReports(String cid) async {
     try {
-      final response = await http.get(Uri.parse(apiUrl));
+      final response = await http.get(Uri.parse("http://15.206.209.30/attendance/get_report.php?cid=${cid}"));
 
       if (response.statusCode == 200) {
 
@@ -32,9 +32,9 @@ class ReportController {
       return [];
     }
   }
-  static Future<List<ClientFormReportModel>> fetchReportDuplicate() async {
+  static Future<List<ClientFormReportModel>> fetchReportDuplicate(String cid) async {
     try {
-      final response = await http.get(Uri.parse("http://15.206.209.30/attendance/get_duplicate_form.php"));
+      final response = await http.get(Uri.parse("http://15.206.209.30/attendance/get_duplicate_form.php?cid=$cid"));
 
       if (response.statusCode == 200) {
 
@@ -59,19 +59,28 @@ class ReportController {
   static Future<List<ClientFormReportModel>> fetchReports1({
     String? fromDate,
     String? toDate,
+    String? cid,
   }) async {
     try {
       String url = apiUrl;
 
       if (fromDate != null && toDate != null) {
-        url += "?from_date=$fromDate&to_date=$toDate";
+        url += "?from_date=$fromDate&to_date=$toDate&cid=$cid";
       }
 
       final response = await http.get(Uri.parse(url));
-
+      print("=================date wise================");
+      print("=================date wise================");
+      print(response.body);
+      print("=================date wise================");
+      print("=================date wise================");
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-
+        print("=================decoded================");
+        print("=================date wise================");
+        print(decoded);
+        print("=================date wise================");
+        print("=================date wise================");
         if (decoded["status"] == true) {
           List data = decoded["data"];
           return data.map((e) => ClientFormReportModel.fromJson(e)).toList();

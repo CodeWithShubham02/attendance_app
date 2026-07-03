@@ -75,6 +75,7 @@ class UserController {
         Uri.parse("$baseUrl/add_user.php"),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+
         },
         body: {
           "cid": cid,
@@ -146,6 +147,25 @@ class UserController {
     }
     return [];
   }
+  Future<List<UserModel>> fetchUsersByCid1(String cid) async {
+    final response = await http.get(
+      Uri.parse(
+        "http://15.206.209.30/attendance/get_users_cid.php?cid=$cid",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data['status'] == true) {
+        return (data['data'] as List)
+            .map((e) => UserModel.fromJson(e))
+            .toList();
+      }
+    }
+
+    return [];
+  }
   Future<List<Map<String, dynamic>>> fetchUsersByCid(String cid) async {
     final response = await http.get(
       Uri.parse(
@@ -165,18 +185,24 @@ class UserController {
   }
 
 
-  Future<List<UserModel>> fetchUsersInactive() async {
+  Future<List<UserModel>> fetchUsersInactive(String cid) async {
     final response = await http.get(
-      Uri.parse("$baseUrl/get_user_inactive.php"),
+      Uri.parse("$baseUrl/get_all_users.php?cid=$cid"),
     );
 
     final data = json.decode(response.body);
-
+    debugPrint("---===============================");
+    debugPrint("---===============================");
+    print(response.body);
+    print(data);
+    debugPrint("---===============================");
+    debugPrint("---===============================");
     if (data['status'] == true) {
       return (data['data'] as List)
           .map((e) => UserModel.fromJson(e))
           .toList();
     }
+
     return [];
   }
   /// Update user - send all fields

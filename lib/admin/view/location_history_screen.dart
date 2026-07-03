@@ -39,7 +39,7 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
   }
 
   Future<void> loadUsers() async {
-    final fetchedUsers = await controller.fetchUsers();
+    final fetchedUsers = await controller.fetchUsersByCid1(widget.cid);
     setState(() {
       users = fetchedUsers;
       isLoading = false;
@@ -98,6 +98,17 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
@@ -174,7 +185,7 @@ class _LocationHistoryScreenState extends State<LocationHistoryScreen> {
               decoration: const InputDecoration(
                 labelText: "Select Date",
                 border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today),
+                suffixIcon: Icon(Icons.calendar_month,color: Color(0xff2563EB),),
               ),
             ),
 

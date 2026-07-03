@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:joizone/admin/view/all_form_report_screen.dart';
 
 class UploadRemarkScreen extends StatefulWidget {
   const UploadRemarkScreen({super.key});
@@ -50,9 +51,6 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
       print("BODY: ${response.body}");
 
       if (response.body.isEmpty) {
-
-
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Empty response from server")),
         );
@@ -63,6 +61,12 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
 
       if (data["status"] == true) {
         int uploadedCount = rows.length;
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (_) => const AllFormReportScreen(),
+        //   ),
+        // );
         ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(content: Text("Upload Remark Successful. $uploadedCount file uploaded"),
              duration: const Duration(seconds: 4),),
@@ -224,6 +228,17 @@ class _UploadRemarkScreenState extends State<UploadRemarkScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
         title: Text("Upload Remark",style: TextStyle(fontSize: 16,color: Colors.white),),

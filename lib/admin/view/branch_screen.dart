@@ -24,6 +24,17 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
   bool isLoading = false;
 
   void saveBranch() async {
+    if (nameCtrl.text.trim().isEmpty ||
+        distanceCtrl.text.trim().isEmpty ||
+        latCtrl.text.trim().isEmpty ||
+        longCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter all fields."),
+        ),
+      );
+      return;
+    }
     setState(() => isLoading = true);
 
     final success = await controller.addBranch(
@@ -49,6 +60,17 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         iconTheme: IconThemeData(
           color: Colors.white
         ),
@@ -135,7 +157,7 @@ class _AddBranchScreenState extends State<AddBranchScreen> {
             ElevatedButton(
               onPressed: isLoading ? null : saveBranch,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xff1D4ED8),
                 foregroundColor: Colors.white,
                 elevation: 3,
                 padding: const EdgeInsets.symmetric(

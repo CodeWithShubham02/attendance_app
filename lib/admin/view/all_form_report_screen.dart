@@ -16,7 +16,8 @@ import '../controller/form_reports_controller.dart';
 import 'duplicate_form_screen.dart';
 
 class AllFormReportScreen extends StatefulWidget {
-  const AllFormReportScreen({super.key});
+  final String cid;
+  const AllFormReportScreen({super.key, required this.cid});
 
   @override
   State<AllFormReportScreen> createState() => _AllFormReportScreenState();
@@ -31,7 +32,12 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
   @override
   void initState() {
     super.initState();
-    reportsFuture = ReportController.fetchReports();
+    reportsFuture = ReportController.fetchReports(widget.cid);
+    print("=============");
+    print("=============");
+    print(reportsFuture);
+    print("=============");
+    print("=============");
   }
   int rowsPerPage = 10;
   int currentPage = 0;
@@ -121,7 +127,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
 
     if (success) {
       setState(() {
-        reportsFuture = ReportController.fetchReports(); // 🔥 refresh
+        reportsFuture = ReportController.fetchReports(widget.cid); // 🔥 refresh
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,6 +160,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         reportsFuture = ReportController.fetchReports1(
           fromDate: fromDate,
           toDate: toDate,
+          cid: widget.cid,
         );
       });
     }
@@ -380,6 +387,21 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
       return time;
     }
   }
+
+  //edit form
+  final List<String> statusList = [
+    "Rejected",
+    "Review",
+    "Partial",
+    "Carded",
+  ];
+  final List<String> relationList = ["ETB", "NTB"];
+  final List<String> variantList = ["Platinum", "Signature"];
+  String? selectedStatusRemark;
+  String? selectedRelationListRemark;
+  String? selectedVariantListRemark;
+
+
   void _showEditDialog(ClientFormReportModel report) {
     final applicationController = TextEditingController(
       text: report.applicationNo,
@@ -388,7 +410,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
     final variantController = TextEditingController(text: report.variant);
     final statusController = TextEditingController(text: report.status);
     final remarksController = TextEditingController(text: report.remarks);
-    TextEditingController managerRemark = TextEditingController();
+    TextEditingController managerRemark = TextEditingController(text: report.managerRemarks);
 
     Get.defaultDialog(
       title: "Edit Form",
@@ -397,28 +419,84 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              SizedBox(height: 10,),
               TextField(
                 controller: applicationController,
                 decoration: const InputDecoration(
                   labelText: "Application Number",
                 ),
               ),
-              TextField(
-                controller: relationController,
-                decoration: const InputDecoration(labelText: "Relation"),
+              SizedBox(height: 10,),
+              DropdownButtonFormField<String>(
+                value: selectedRelationListRemark,
+                decoration: const InputDecoration(
+                  labelText: "Relation",
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text("Select Relation"),
+                items: relationList.map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedRelationListRemark = value;
+                    relationController.text = value!;
+                  });
+                },
               ),
-              TextField(
-                controller: variantController,
-                decoration: const InputDecoration(labelText: "Variant"),
+              SizedBox(height: 10,),
+              SizedBox(height: 10,),
+              DropdownButtonFormField<String>(
+                value: selectedVariantListRemark,
+                decoration: const InputDecoration(
+                  labelText: "Variant",
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text("Select Variant"),
+                items: variantList.map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedVariantListRemark = value;
+                    variantController.text = value!;
+                  });
+                },
               ),
-              TextField(
-                controller: statusController,
-                decoration: const InputDecoration(labelText: "Status"),
+              SizedBox(height: 10,),
+              SizedBox(height: 10,),
+              DropdownButtonFormField<String>(
+                value: selectedStatusRemark,
+                decoration: const InputDecoration(
+                  labelText: "Status",
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text("Select Status"),
+                items: statusList.map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedStatusRemark = value;
+                    statusController.text = value!;
+                  });
+                },
               ),
+              SizedBox(height: 10,),
               TextField(
                 controller: remarksController,
                 decoration: const InputDecoration(labelText: "Remarks"),
               ),
+              SizedBox(height: 10,),
               TextField(
                 controller: managerRemark,
                 decoration: const InputDecoration(labelText: "Manager Remark"),
@@ -439,11 +517,12 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                   if (success) {
                     Get.back(); // close dialog
 
-                    await ReportController.fetchReports(); // refresh API
-
+                    setState(() {
+                      reportsFuture = ReportController.fetchReports(widget.cid);
+                    });
                     Get.snackbar(
-                      "Success",
-                      "Updated successfully",
+                      "Success updated...",
+                      "Successfully updated manager remark...",
                       snackPosition: SnackPosition.BOTTOM,
                     );
                   } else {
@@ -678,6 +757,17 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text(
@@ -686,12 +776,12 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
         ),
         actions: [
           ElevatedButton(onPressed: (){
-            Get.to(() => DuplicateFormScreen());
+            Get.to(() => DuplicateFormScreen(cid:widget.cid));
           }, style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(5), // Perfect square corners
             ),
-          ),child: Text("Duplicate Form")),// Get.to(()=>ShiftScreen(cid:widget.cid));
+          ),child: Text("Inactive Form")),// Get.to(()=>ShiftScreen(cid:widget.cid));
           SizedBox(
             width: 10,
           ),
@@ -722,6 +812,16 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
           SizedBox(
             width: 10,
           ),
+          ElevatedButton(onPressed: (){
+            Get.to(()=>UploadRemarkScreen());
+          }, style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5), // Perfect square corners
+            ),
+          ),child: Text("Upload Remark")),
+          SizedBox(
+            width: 10,
+          ),
           ElevatedButton(
             onPressed: () async {
               final reports = await reportsFuture;
@@ -747,13 +847,6 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
           SizedBox(
             width: 10,
           ),
-          ElevatedButton(onPressed: (){
-            Get.to(()=>UploadRemarkScreen());
-          }, style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(5), // Perfect square corners
-            ),
-          ),child: Text("Upload Remark")),
           IconButton(
             onPressed: _pickDateAndFetchReports,
             icon: Icon(Icons.calendar_month, color: Colors.white),
@@ -883,7 +976,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                     children: [
                                       const Text("User Name"),
                                       IconButton(
-                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        icon: const Icon(Icons.filter_list, size: 18,color: Color(0xff2563EB),),
                                         onPressed: _showUserFilter,
                                       ),
                                     ],
@@ -894,7 +987,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                     children: [
                                       const Text("City Name"),
                                       IconButton(
-                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        icon: const Icon(Icons.filter_list, size: 18,color: Color(0xff2563EB),),
                                         onPressed: _showCityFilter,
                                       ),
                                     ],
@@ -910,7 +1003,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                     children: [
                                       const Text("Status"),
                                       IconButton(
-                                        icon: const Icon(Icons.filter_list, size: 18),
+                                        icon: const Icon(Icons.filter_list, size: 18,color: Color(0xff2563EB),),
                                         onPressed: _showStatusFilter,
                                       ),
                                     ],
@@ -945,13 +1038,13 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                       Row(
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit),
+                                            icon: const Icon(Icons.edit,color: Color(0xff2563EB),),
                                             onPressed: () {
                                               _showEditDialog(report);
                                             },
                                           ),
                                           IconButton(
-                                            icon: const Icon(Icons.highlight_off),
+                                            icon: const Icon(Icons.highlight_off,color: Colors.black,),
                                             onPressed: () {
                                               debugPrint(report.uid.toString());
                                               _confirmAndUpdateDuplicate(report);
@@ -980,7 +1073,7 @@ class _AllFormReportScreenState extends State<AllFormReportScreen> {
                                               report.bankRemarks.toLowerCase() ==
                                                   "approved"
                                               ? Colors.green
-                                              : Colors.red,
+                                              : Color(0xff2563EB),
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

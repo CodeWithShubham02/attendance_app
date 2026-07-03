@@ -5,6 +5,7 @@ import '../controller/branch_controller.dart';
 import '../model/branch_model.dart';
 import 'branch_screen.dart';
 import 'edit_branch_screen.dart';
+import 'inactive_branch_sheet.dart';
 
 class BranchListScreen extends StatefulWidget {
   final String cid;
@@ -33,8 +34,8 @@ class _BranchListScreenState extends State<BranchListScreen> {
     final ok = await controller.deleteBranch(id);
     if (ok) refresh();
     Get.snackbar(
-      "Delete",
-      "Kiosk deleted successfully",
+      "Inactive",
+      "Branch inactive successfully",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.red.shade600,
       colorText: Colors.white,
@@ -51,10 +52,45 @@ class _BranchListScreenState extends State<BranchListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(backgroundColor:Colors.blue,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
           iconTheme: IconThemeData(
             color: Colors.white
           ),
-          title: const Text("All Kiosk",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),)),
+          title: const Text("All Kiosk",style: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'impact'),),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                builder: (_) => InactiveBranchSheet(cid: widget.cid),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+            child: const Text("Inactive Kiosk"),
+          ),
+          SizedBox(width: 20,)
+        ],
+      ),
 
       body: FutureBuilder<List<BranchModel>>(
         future: future,
@@ -78,7 +114,7 @@ class _BranchListScreenState extends State<BranchListScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        icon: const Icon(Icons.edit, color:  Color(0xff2563EB)),
                         onPressed: () async {
                           final res = await Navigator.push(
                             context,
@@ -90,23 +126,23 @@ class _BranchListScreenState extends State<BranchListScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
+                        icon: const Icon(Icons.settings, color: Colors.red),
                         onPressed: () async {
                           bool confirm = await showDialog(
                             context: context,
                             builder: (context) {
                               return AlertDialog(
-                                title: Text("Delete Kiosk"),
-                                content: Text("Are you sure you want to delete this kiosk?"),
+                                title: Text("Inactivate Kiosk"),
+                                content: Text("Are you sure you want to inactive this kiosk?"),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, false), // ❌ Cancel
                                     child: Text("Cancel"),
                                   ),
                                   ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                    style: ElevatedButton.styleFrom(backgroundColor:  Color(0xff2563EB)),
                                     onPressed: () => Navigator.pop(context, true), // ✅ Confirm
-                                    child: Text("Delete"),
+                                    child: Text("Inactivate",style: TextStyle(color: Colors.white),),
                                   ),
                                 ],
                               );

@@ -54,6 +54,17 @@ class _EditBranchScreenState extends State<EditBranchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xff2563EB),
+                  Color(0xff1D4ED8),
+                ],
+              ),
+            ),
+          ),
           backgroundColor: Colors.blue,
           iconTheme: IconThemeData(color: Colors.white),
           title: const Text("Edit Kiosk",style: TextStyle(color: Colors.white,fontSize: 18),)),
@@ -129,7 +140,7 @@ class _EditBranchScreenState extends State<EditBranchScreen> {
               ElevatedButton(
                 onPressed: isLoading ? null : update,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor:  Color(0xff2563EB),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 ),

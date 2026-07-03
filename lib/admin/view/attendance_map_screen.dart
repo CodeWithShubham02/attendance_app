@@ -202,7 +202,19 @@ class _GoogleLocationMapScreenState extends State<GoogleLocationMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Attendance Route Map")),
+      appBar: AppBar(
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xff2563EB),
+                  Color(0xff1D4ED8),
+                ],
+              ),
+            ),
+          ),
+          title: const Text("Attendance Route Map",style: TextStyle(color: Colors.white),)),
       body: Column(
         children: [
           SizedBox(

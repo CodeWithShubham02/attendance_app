@@ -15,7 +15,8 @@ import '../controller/attendance_summary_controller.dart';
 import '../model/attendance_summary_model.dart';
 
 class AttendanceSummaryScreen extends StatefulWidget {
-  const AttendanceSummaryScreen({super.key});
+  final String cid;
+  const AttendanceSummaryScreen({super.key, required this.cid});
 
   @override
   State<AttendanceSummaryScreen> createState() =>
@@ -43,6 +44,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
       records = await AttendanceSummaryController.fetchSummary(
         fromDate: from,
         toDate: to,
+        cid: widget.cid
       );
       allRecords = records;
 
@@ -93,13 +95,14 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
     TextCellValue("Total Days"),
     TextCellValue("Total Present"),
     TextCellValue("Total Absent"),
+    TextCellValue("Total WO"),
+    TextCellValue("Total Late"),
+    TextCellValue("Total HalfDay"),
+    TextCellValue("Missed Punch"),
     TextCellValue("Total GPS Off"),
     TextCellValue("Total Internet Off"),
     TextCellValue("Total Outside Kiosk"),
-    TextCellValue("Total WO"),
-    TextCellValue("Missed Punch"),
-    TextCellValue("Total Late"),
-    TextCellValue("Total HalfDay"),
+
     TextCellValue("Total Break Time \n (HH:MM:SS)"),
     TextCellValue("Total Working Time \n (HH:MM:SS)"),
 
@@ -119,13 +122,13 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
       TextCellValue(r.totalDays.toString()),
       TextCellValue(r.totalPresent.toString()),
       TextCellValue(r.totalAbsent.toString()),
+      TextCellValue(r.totalHoliday.toString()),
+      TextCellValue(r.totalLate.toString()),
+      TextCellValue(r.totalHalfDay.toString()),
+      TextCellValue(r.missedPunchOut.toString()),
       TextCellValue(r.totalGps.toString()),
       TextCellValue(r.totalInternet.toString()),
       TextCellValue(r.totalOutside.toString()),
-      TextCellValue(r.totalHoliday.toString()),
-      TextCellValue(r.missedPunchOut.toString()),
-      TextCellValue(r.totalLate.toString()),
-      TextCellValue(r.totalHalfDay.toString()),
       TextCellValue(r.total_break_minutes.toString()),
       TextCellValue(r.totalTimeFormate.toString()),
 
@@ -281,6 +284,17 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("Attendance Summary",style: TextStyle(color: Colors.white,fontSize: 18),),
@@ -388,13 +402,13 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                       DataColumn(label: Text("Total Days")),
                       DataColumn(label: Text("Total Present")),
                       DataColumn(label: Text("Total Absent")),
+                      DataColumn(label: Text("Total WO")),
+                      DataColumn(label: Text("Total Late Marks")),
+                      DataColumn(label: Text("Total HalfDay Marks")),
+                      DataColumn(label: Text("Missed Punch")),
                       DataColumn(label: Text("Total GPS Off")),
                       DataColumn(label: Text("Total Internet Off")),
                       DataColumn(label: Text("Total Outside Kiosk")),
-                      DataColumn(label: Text("Total WO")),
-                      DataColumn(label: Text("Missed Punch")),
-                      DataColumn(label: Text("Total Late Marks")),
-                      DataColumn(label: Text("Total HalfDay Marks")),
                       DataColumn(label: Text("Total Break Time \n  (HH:MM:SS)")),
                       DataColumn(label: Text("Total Working Time \n  (HH:MM:SS)")),
                       //DataColumn(label: Text("Total Hours")),
@@ -414,13 +428,13 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                           DataCell(Text(r.totalDays.toString())),
                           DataCell(Text(r.totalPresent.toString())),
                           DataCell(Text(r.totalAbsent.toString())),
+                          DataCell(Text(r.totalHoliday.toString())),
+                          DataCell(Text(r.totalLate.toString())),
+                          DataCell(Text(r.totalHalfDay.toString())),
+                          DataCell(Text(r.missedPunchOut.toString())),
                           DataCell(Text(r.totalGps.toString())),
                           DataCell(Text(r.totalInternet.toString())),
                           DataCell(Text(r.totalOutside.toString())),
-                          DataCell(Text(r.totalHoliday.toString())),
-                          DataCell(Text(r.missedPunchOut.toString())),
-                          DataCell(Text(r.totalLate.toString())),
-                          DataCell(Text(r.totalHalfDay.toString())),
                           DataCell(Text(r.total_break_minutes.toString())),
                           DataCell(Text(r.totalTimeFormate.toString())),
                           //DataCell(Text(r.totalHour.toString())),

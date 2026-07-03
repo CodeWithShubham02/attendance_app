@@ -3,11 +3,15 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:joizone/admin/roster/roster_screen.dart';
 import 'package:joizone/admin/view/add_user_screen.dart';
 import 'package:joizone/admin/view/shift_screen.dart';
 import 'package:joizone/admin/view/user_attendance_detail_screen.dart';
+import 'package:month_picker_dialog/month_picker_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import '../../chatbot/chatbot_screen.dart';
 import '../controller/attendance_location_controller.dart';
 import '../controller/user_controller.dart';
 import '../model/user_model.dart';
@@ -59,6 +63,24 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     fetchAttendance();
     fetchUsers();
     fetchTodayReport();
+    fetchMonthlyReport(
+      DateFormat('yyyy-MM').format(DateTime.now()),
+    );
+    fetchPerformance();
+  }
+  Future<void> loadUsers() async {
+
+    final fetchedUsers = await controller.fetchUsersByCid1(widget.cid);
+    setState(() {
+      users = fetchedUsers;
+      print("===============================");
+      print("===============================");
+      print(users);
+      print(fetchedUsers);
+      print("===============================");
+      print("===============================");
+      isLoading = false;
+    });
   }
   //---chart
   String formatDate(DateTime date) {
@@ -123,14 +145,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   Future<void> fetchUsers() async {
     final response = await http.get(
-      Uri.parse("http://15.206.209.30/attendance/get_users.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_users_cid.php?cid=${widget.cid}"),
     );
-
     final data = jsonDecode(response.body);
-
     int male = 0;
     int female = 0;
-
+    print("=============================");
+    print("=============================");
+    print(data);
+    print(response.body);
+    print("=============================");
+    print("=============================");
     for (var user in data['data']) {
       if ((user['gender'] ?? "").toString().toLowerCase() == "male") {
         male++;
@@ -144,6 +169,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       femaleCount = female;
     });
   }
+
+
   Future<void> fetchTodayReport() async {
     final response = await http.post(
       Uri.parse("http://15.206.209.30/attendance/get_report.php"),
@@ -188,12 +215,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     return Card(
       elevation: 4,
+      color: Colors.white,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(
+          color: Color(0xff2563EB),
+          width: 1.5,
+        ),
+      ),
+
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             const Text(
-              "Today's Attendance",
+              "📊 Today's Attendance  ",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -267,15 +304,21 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     return Card(
       elevation: 4,
+      color: Colors.white,
+      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(
+          color: Color(0xff2563EB),
+          width: 1.5,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             const Text(
-              "",
+              "📊 Total Employees ",
               textAlign: TextAlign.left,
               style: TextStyle(
                 fontSize: 18,
@@ -283,7 +326,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 25),
 
             SizedBox(
               height: 160,
@@ -323,7 +366,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -335,7 +378,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       height: 14,
                       color: Colors.blue,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       "Male\n$maleCount",
                       textAlign: TextAlign.center,
@@ -352,7 +395,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       height: 14,
                       color: Colors.pink,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       "Female\n$femaleCount",
                       textAlign: TextAlign.center,
@@ -365,7 +408,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
             Text(
               "Total Employees : $total",
@@ -433,20 +476,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final total = kioskData.values.fold(0, (sum, val) => sum + val);
 
     return Card(
+      color: Colors.white,
       elevation: 4,
+      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(
+          color: Color(0xff2563EB),
+          width: 1.5,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             const Text(
-              "Kiosk Wise Reports",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              "📈 Branch Wise Reports",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
             ),
 
             const SizedBox(height: 10),
@@ -510,26 +560,221 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       ),
     );
   }
+  DateTime selectedMonth = DateTime.now();
+
+  List<Map<String, dynamic>> kioskData = [];
+  int totalMonthReports = 0;
+  Future<void> fetchMonthlyReport(String month) async {
+    final response = await http.post(
+      Uri.parse("http://15.206.209.30/attendance/get_monthly_kiosk_report.php"),
+      body: {
+        "month": month,
+        "cid":widget.cid
+      },
+    );
+
+    final json = jsonDecode(response.body);
+
+    if (json["status"] == true) {
+      setState(() {
+        kioskData = List<Map<String, dynamic>>.from(json["data"]);
+        totalMonthReports = json["total_reports"];
+      });
+    }
+  }
+  List<PieChartSectionData> getMonthlySections() {
+    return kioskData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+
+      return PieChartSectionData(
+        value: (item["total"] as num).toDouble(),
+        title: item["total"].toString(),
+        radius: 70,
+        color: Colors.primaries[index % Colors.primaries.length],
+      );
+    }).toList();
+  }
+  Widget reportMonthChart() {
+    return Card(
+      elevation: 4,
+      color: Colors.white,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(
+          color: Color(0xff2563EB),
+          width: 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  "📈 Monthly Report",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                IconButton(
+                  icon: const Icon(Icons.calendar_month,color: Colors.redAccent,),
+                  onPressed: () async {
+                    final month = await showMonthPicker(
+                      context: context,
+                      initialDate: selectedMonth,
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime.now(),
+                    );
+
+                    if (month != null) {
+                      selectedMonth = month;
+
+                      await fetchMonthlyReport(
+                        DateFormat('yyyy-MM').format(month),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              height: 220,
+              child: kioskData.isEmpty
+                  ? const Center(child: Text("No Data"))
+                  : PieChart(
+                PieChartData(
+                  centerSpaceRadius: 40,
+                  sectionsSpace: 2,
+                  sections: getMonthlySections(),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            Wrap(
+              spacing: 16,
+              runSpacing: 10,
+              children: kioskData.map((item) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Container(
+                    //   width: 14,
+                    //   height: 14,
+                    //   color: getKioskColor(item["kiosk_name"]),
+                    // ),
+                    const SizedBox(width: 5),
+                    Text(
+                      "${item["kiosk_name"]} (${item["total"]})",
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              "Total Reports : $totalMonthReports",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   //----
-  Future<void> loadUsers() async {
-    final fetchedUsers = await controller.fetchUsers();
-    setState(() {
-      users = fetchedUsers;
-      isLoading = false;
-    });
+  List<Map<String,dynamic>> performanceList=[];
+
+  Future<void> fetchPerformance() async {
+    final response = await http.post(
+      Uri.parse("http://15.206.209.30/attendance/weekly_team_performance.php"),
+      body: {
+        "cid": widget.cid,
+      },
+    );
+
+    print(response.body);
+
+    final json = jsonDecode(response.body);
+
+    if (json["status"] == true) {
+      setState(() {
+        performanceList =
+        List<Map<String, dynamic>>.from(json["data"]);
+        print("=======================");
+        print(performanceList);
+        print("=======================");
+      });
+    }
+  }
+  Map<String, List<Map<String, dynamic>>> groupByBranch() {
+    Map<String, List<Map<String, dynamic>>> grouped = {};
+
+    for (var item in performanceList) {
+      final branch = item["branch"] ?? "Unknown";
+
+      if (!grouped.containsKey(branch)) {
+        grouped[branch] = [];
+      }
+
+      grouped[branch]!.add(item);
+    }
+
+    return grouped;
   }
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
+        //backgroundColor: Colors.blue,
         iconTheme: IconThemeData(
           color: Colors.white
         ),
         title: const Text("Dashboard",style: TextStyle(color: Colors.white,fontSize: 18,),),
-
         actions: [
+          // ElevatedButton(onPressed: (){
+          //   Get.to(
+          //         () => ChatbotScreen(
+          //       cid:widget.cid,
+          //       uid: widget.cid,
+          //       name: 'Admin',
+          //       branchName: 'Admin',
+          //     ),
+          //   );
+          // },
+          //     style: ElevatedButton.styleFrom(
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(5), // Perfect square corners
+          //       ),
+          //     ),child: Text("Group Chat")),
+          SizedBox(width: 10,),
           ElevatedButton(onPressed: (){
             Get.to(()=>AddBranchScreen(cid:widget.cid));
           },
@@ -537,7 +782,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(5), // Perfect square corners
                 ),
-              ),child: Text("Kiosk Master")),
+              ),child: Text("Kiosk Master",
+                style: TextStyle(color: Color(0xff1D4ED8),fontFamily: 'impact',fontSize: 14),
+              )),
           SizedBox(
             width: 10,
           ),
@@ -547,17 +794,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(5), // Perfect square corners
             ),
-          ),child: Text("Shift Master")),
+          ),child: Text("Shift Master",  style: TextStyle(color: Color(0xff1D4ED8),fontFamily: 'impact',fontSize: 14),)),
           SizedBox(
             width: 10,
           ),
           ElevatedButton(onPressed: (){
             Get.to(()=>DepartmentScreen(cid: widget.cid));
           },style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(5), // Perfect square corners
             ),
-          ), child: Text("Designation")),
+          ), child: Text("Designation",  style: TextStyle(color: Color(0xff1D4ED8),fontFamily: 'impact',fontSize: 14),)),
+          SizedBox(width: 10,),
           IconButton(
             icon: const Icon(Icons.refresh_outlined,color: Colors.white,),
             onPressed: () async {
@@ -599,7 +848,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             },
           ),
 
-
+          SizedBox(width: 20,)
 
         ],
       ),
@@ -617,33 +866,44 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
+                      fontWeight: FontWeight.bold
                     ),
                   ),
                   IconButton(onPressed: (){
                     fetchAttendance();
                     fetchTodayReport();
-                  }, icon: Icon(Icons.refresh_outlined))
+                    fetchTodayReport();
+                    fetchMonthlyReport(
+                      DateFormat('yyyy-MM').format(DateTime.now()),
+                    );
+                    fetchPerformance();
+                  }, icon: Icon(Icons.refresh_outlined,size: 30,color: Color(0xff2563EB),))
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Column(
                 children: [
                   Row(
                     children: [
-                      Expanded(child: attendanceChart()),
-                      SizedBox(width: 10),
+                      Expanded(child:  attendanceChart()),
+                      SizedBox(width: 20),
                       Expanded(child: userChart()),
                     ],
                   ),
                   Row(
                     children: [
                       Expanded(child: reportChart(reportList)),
-                      SizedBox(width: 10),
-                      Expanded(child: SizedBox()),
+                      SizedBox(width: 20),
+                      Expanded(child: reportMonthChart()),
                     ],
                   ),
+
                 ],
-              )
+              ),
+              const SizedBox(height: 10),
+              Center(child: const Text("Weekly Performance - (Mon - Sun)",style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold,fontSize: 18),)),
+              const SizedBox(height: 10),
+              branchPerformanceWidget(),
             ],
           ),
         ),
@@ -653,31 +913,68 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           padding: EdgeInsets.zero,
           children: [
             // 🔵 HEADER
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue, // Change drawer header background color
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xff2563EB),
+                    Color(0xff1D4ED8),
+                  ],
+                ),
               ),
-              accountName: const Text("Joizone"),
-              accountEmail: const Text("joizone@gmail.com"),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 35,
+                    backgroundColor: Colors.white,
+                    child: Image.asset("assets/image/logo.png"),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Track Me",
+                    style: TextStyle(
+                      color: Colors.white, // Dark Slate
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    "help.trackme@gmail.com",
+    style: TextStyle(
+    color: Colors.white, // Dark Slate
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    ),
+                  ),
+                ],
               ),
             ),
             // 🟢 PROFILE
             ListTile(
-              leading: Icon(Icons.person),
-              title: Text("User Profile"),
+              leading: Icon(Icons.person,color: Color(0xff2563EB),size: 22,),
+              title: Text("User Profile",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
               onTap: () {
                 Get.back();
-                Get.to(() => UsersTableScreen()); // change to ProfileScreen if you have
+                Get.to(() => UsersTableScreen(cid:widget.cid)); // change to ProfileScreen if you have
               },
             ),
 
             // 🟢 ATTENDANCE
             ListTile(
-              leading: Icon(Icons.calendar_today),
-              title: Text("Daily Attendance"),
+              leading: Icon(Icons.calendar_today,color: Color(0xff2563EB),size: 22,),
+              title: Text("Daily Attendance",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
               onTap: () {
                 Get.back();
                 Get.to(() => AllEmployeeAttendanceScreen(cid: widget.cid));
@@ -685,11 +982,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             ),
             // 🟢 LOCATION CAPTURING
             ListTile(
-              leading: Icon(Icons.file_copy),
-              title: Text("Form Details"),
+              leading: Icon(Icons.file_copy,color: Color(0xff2563EB),size: 22,),
+              title: Text("Form Details",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
               onTap: () {
                 Get.back();
-                Get.to(()=>AllFormReportScreen());
+                Get.to(()=>AllFormReportScreen(cid: widget.cid,));
               },
             ),
             // ListTile(
@@ -700,30 +1002,58 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             //     Get.to(()=>UploadRemarkScreen());
             //   },
             // ),
-
+            ListTile(
+              leading: Icon(Icons.holiday_village,color: Color(0xff2563EB),size: 22,),
+              title: Text("Roster",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
+              onTap: () {
+                Get.back();
+                Get.to(()=>RosterScreen(cid: widget.cid,));
+              },
+            ),
             // 🟢 LOCATION REPORT
             ListTile(
-              leading: Icon(Icons.location_on),
-              title: Text("Location History"),
+              leading: Icon(Icons.location_on,color: Color(0xff2563EB),size: 22,),
+              title: Text("Location History",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
               onTap: () {
                 Get.back();
                 Get.to(()=>LocationHistoryScreen(cid: widget.cid,));
               },
             ),
             ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text("Send Notifications"),
+              leading: Icon(Icons.notifications,color: Color(0xff2563EB),size: 22,),
+              title: Text("Send Notifications",
+                style: TextStyle(
+                color: Color(0xFF1E293B), // Dark Slate
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),),
               onTap: () {
                 Get.back();
                 Get.to(()=>SendNotificationScreen(cid: widget.cid,));
               },
             ),
+
             const Divider(),
 
             // 🔴 LOGOUT
             ListTile(
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: Text("Logout"),
+              leading: Icon(Icons.logout, color: Color(0xff2563EB),size: 22,),
+              title: Text("Logout",
+                style: TextStyle(
+                  color: Color(0xFF1E293B), // Dark Slate
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),),
               onTap: () => logout(context),
             ),
           ],
@@ -732,5 +1062,112 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
+  Widget branchPerformanceWidget() {
+    final grouped = groupByBranch();
 
+    if (grouped.isEmpty) {
+      return const Center(
+        child: Text("No Performance Data"),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: grouped.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, // 👈 2 branch in one row
+        crossAxisSpacing: 1,
+        mainAxisSpacing: 1,
+        childAspectRatio: 0.90,
+      ),
+      itemBuilder: (context, index) {
+        final branch = grouped.keys.elementAt(index);
+        final users = grouped[branch]!;
+
+        users.sort(
+              (a, b) => (b["forms"] as int).compareTo(a["forms"] as int),
+        );
+
+        return Card(
+          elevation: 3,
+          child: Column(
+            children: [
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(8),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xff2563EB),
+                      Color(0xff1D4ED8),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    branch,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  child: DataTable(
+                    columnSpacing: 8,
+                    horizontalMargin: 8,
+                    headingRowHeight: 30,
+                    dataRowMinHeight: 30,
+                    dataRowMaxHeight: 38,
+                    columns: const [
+                      DataColumn(label: Text("R")),
+                      DataColumn(label: Text("Name")),
+                      DataColumn(label: Text("Form")),
+                      DataColumn(label: Text("%")),
+                    ],
+                    rows: List.generate(users.length, (i) {
+
+                      final u = users[i];
+
+                      String rank = switch (i) {
+                        0 => "🥇",
+                        1 => "🥈",
+                        2 => "🥉",
+                        _ => "${i + 1}",
+                      };
+
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(rank)),
+                          DataCell(
+                            SizedBox(
+                              width: 270,
+                              child: Text(
+                                u["name"].toString(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          DataCell(Text("${u["forms"]}")),
+                          DataCell(Text("${u["performance"]}%")),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

@@ -35,13 +35,25 @@ class _DepartmentScreenState extends State<DepartmentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("User Type",style: TextStyle(color: Colors.white,fontSize: 18),),
         backgroundColor: Colors.blue,
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor:  Color(0xff2563EB),
         onPressed: _addDepartmentDialog,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add,color: Colors.white,),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -57,18 +69,18 @@ class _DepartmentScreenState extends State<DepartmentScreen> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit,
-                        color: Colors.blue),
-                    onPressed: () =>
-                        _editDepartmentDialog(dept),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete,
-                        color: Colors.red),
-                    onPressed: () =>
-                        _deleteDepartment(dept.id),
-                  ),
+                  // IconButton(
+                  //   icon: const Icon(Icons.edit,
+                  //       color: Colors.blue),
+                  //   onPressed: () =>
+                  //       _editDepartmentDialog(dept),
+                  // ),
+                  // IconButton(
+                  //   icon: const Icon(Icons.delete,
+                  //       color: Colors.red),
+                  //   onPressed: () =>
+                  //       _deleteDepartment(dept.id),
+                  // ),
                 ],
               ),
             ),

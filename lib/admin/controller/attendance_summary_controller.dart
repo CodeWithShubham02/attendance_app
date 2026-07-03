@@ -9,6 +9,7 @@ class AttendanceSummaryController {
   static Future<List<AttendanceSummary>> fetchSummary({
     required String fromDate,
     required String toDate,
+    required String cid,
   }) async {
     final response = await http.post(
       Uri.parse(url),
@@ -16,6 +17,7 @@ class AttendanceSummaryController {
       body: jsonEncode({
         "from_date": fromDate,
         "to_date": toDate,
+        "cid":cid,
       }),
     );
 

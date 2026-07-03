@@ -22,6 +22,8 @@ import '../model/branch_model.dart';
 import 'package:flutter/foundation.dart';
 
 class AddUserScreen extends StatefulWidget {
+  final String cid;
+  const AddUserScreen({super.key, required this.cid});
   @override
   State<AddUserScreen> createState() => _AddUserScreenState();
 }
@@ -81,10 +83,10 @@ class _AddUserScreenState extends State<AddUserScreen> {
     // ✅ API format (yyyy-MM-dd)
     String apiDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
     final success = await _controller1.createUser(
-      cid: "1",
+      cid: widget.cid,
       userid: useridCtrl.text,
       password: passwordCtrl.text,
-      userToken: "token_123",
+      userToken: "",
       userImg: photoUrl ?? "",
       fullName: nameCtrl.text,
       userEmail: emailCtrl.text,
@@ -285,7 +287,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   Future<void> loadBranches() async {
-    final list = await _controller.getBranches("1"); // cid = 1
+    final list = await _controller.getBranches(widget.cid); // cid = 1
 
     setState(() {
       branchList = list;
@@ -294,7 +296,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   Future<void> loadShift() async {
-    final list = await _shiftController.fetchShifts("1");
+    final list = await _shiftController.fetchShifts(widget.cid);
     setState(() {
       shiftList = list;
       isShiftLoading = false;
@@ -302,7 +304,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   Future<void> loadDepartment() async {
-    final list = await _departmentController.fetchDepartments("1");
+    final list = await _departmentController.fetchDepartments(widget.cid);
     setState(() {
       departmentList = list;
       isDepartLoading = false;
@@ -322,10 +324,21 @@ class _AddUserScreenState extends State<AddUserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text(
-          "Create User",
+          "Add Users",
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
       ),
@@ -486,7 +499,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                         labelText: "Date of Joining",
                         hintText: "DD-MM-YYYY",
                         border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
+                        suffixIcon: Icon(Icons.calendar_today,color:  Color(0xff2563EB),),
                       ),
                     ),
                   ),
@@ -743,7 +756,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
               child: ElevatedButton(
                 onPressed: loading ? null : submitUser,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor:  Color(0xff2563EB),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
@@ -756,7 +769,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Create User"),
+                    : const Text("Add User"),
               ),
             ),
           ],

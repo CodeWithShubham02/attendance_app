@@ -124,6 +124,17 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         title: const Text(
           "Live Location",
           style: TextStyle(color: Colors.white),

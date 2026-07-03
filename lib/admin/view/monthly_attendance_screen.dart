@@ -53,7 +53,7 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2026),
-      lastDate: DateTime.now().add(Duration(days: 7)),
+      lastDate: DateTime.now().add(Duration(days: 6)),
       saveText: "Submit",
       initialDateRange: selectedRange,
     );
@@ -591,6 +591,17 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("Employee Attendance",style: TextStyle(color: Colors.white,fontSize: 18),),

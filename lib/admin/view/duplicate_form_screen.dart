@@ -10,7 +10,8 @@ import '../../user/model/client_form_report_model.dart';
 import '../controller/form_reports_controller.dart';
 
 class DuplicateFormScreen extends StatefulWidget {
-  const DuplicateFormScreen({super.key});
+  final String cid;
+  const DuplicateFormScreen({super.key,required this.cid});
 
   @override
   State<DuplicateFormScreen> createState() => _DuplicateFormScreenState();
@@ -26,7 +27,7 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
   @override
   void initState() {
     super.initState();
-    reportsFuture = ReportController.fetchReportDuplicate();
+    reportsFuture = ReportController.fetchReportDuplicate(widget.cid);
   }
   void _showImageDialog(BuildContext context, String imageUrl) {
     showDialog(
@@ -89,9 +90,9 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
         await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Mark as Duplicate?"),
+            title: const Text("Mark as active form?"),
             content: const Text(
-              "Are you sure you want to mark this form as duplicate?",
+              "Are you sure you want to mark this form active?",
             ),
             actions: [
               TextButton(
@@ -121,7 +122,7 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
 
     if (success) {
       setState(() {
-        reportsFuture = ReportController.fetchReportDuplicate(); // 🔥 refresh
+        reportsFuture = ReportController.fetchReportDuplicate(widget.cid); // 🔥 refresh
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -230,9 +231,20 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
-        title: const Text("Duplicate Form Reports",style: TextStyle(color: Colors.white,fontSize: 18),),
+        title: const Text("Inactive Form Reports",style: TextStyle(color: Colors.white,fontSize: 18),),
         actions: [
           IconButton(
             onPressed: () async {
@@ -247,6 +259,7 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
             },
             icon: const Icon(Icons.download, color: Colors.white),
           ),
+          SizedBox(width: 20,),
           // IconButton(
           //   onPressed: _pickDateAndFetchReports,
           //   icon: Icon(Icons.calendar_month, color: Colors.white),
@@ -321,7 +334,7 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
                               // Action
                               DataCell(
                                 IconButton(
-                                  icon: const Icon(Icons.settings),
+                                  icon: const Icon(Icons.settings,color: Color(0xff2563EB),),
                                   onPressed: () {
                                     debugPrint(report.uid.toString());
                                     _confirmAndUpdateDuplicate(report);
@@ -406,9 +419,8 @@ class _DuplicateFormScreenState extends State<DuplicateFormScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: (){
-
-      },child: Icon(Icons.logout_outlined),),
+      // floatingActionButton: FloatingActionButton(onPressed: (){
+      // },child: Icon(Icons.logout_outlined),),
     );
   }
 }

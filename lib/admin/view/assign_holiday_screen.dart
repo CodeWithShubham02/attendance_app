@@ -12,7 +12,8 @@ import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:permission_handler/permission_handler.dart';
 import 'package:universal_html/html.dart' as html;
 class AssignHolidayScreen extends StatefulWidget {
-  const AssignHolidayScreen({super.key});
+  final String cid;
+  const AssignHolidayScreen({super.key,required this.cid});
 
   @override
   State<AssignHolidayScreen> createState() => _AssignHolidayScreenState();
@@ -144,7 +145,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
   }
   Future<List<Map<String, dynamic>>> fetchUsers() async {
     final res = await http.get(
-      Uri.parse("http://15.206.209.30/attendance/get_users.php"),
+      Uri.parse("http://15.206.209.30/attendance/get_users_cid.php?cid=${widget.cid}"),
     );
 
     final data = jsonDecode(res.body);
@@ -277,6 +278,17 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xff2563EB),
+                Color(0xff1D4ED8),
+              ],
+            ),
+          ),
+        ),
         iconTheme: IconThemeData(color: Colors.white),
         title: const Text("Roster", style: TextStyle(fontSize: 18,color: Colors.white)),
       ),
@@ -294,7 +306,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                 ElevatedButton.icon(
                   onPressed:downloadTemplate,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: Color(0xff2563EB),
                     foregroundColor: Colors.white,
                     elevation: 5,
                     padding: const EdgeInsets.symmetric(
@@ -331,12 +343,12 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                         Text("• cid – Company ID (Numeric)"),
                         Text("• uid – User ID (Numeric)"),
                         Text("• userid – jzx001"),
-                        Text("• User Type – User Type Name"),
+                        Text("• user_type – User Type Name"),
                         Text("• office_name – Office Name"),
-                        Text("• status – WO,Present,Absent"),
+                        Text("• status – WO,PRESENT,ABSENT"),
                         Text("• roster_date – DD-MM-YYYY"),
-                        Text("• shift_start – HH:MM AM (07:00 AM)"),
-                        Text("• shift_end – HH:MM PM (02:00 PM)"),
+                        Text("• shift_start – HH:MM AM (7:00 AM)"),
+                        Text("• shift_end – HH:MM PM (2:00 PM)"),
                         SizedBox(height: 6),
                         Text(
                           "⚠ Date & Time format strictly follow karein.",
@@ -356,7 +368,7 @@ class _AssignHolidayScreenState extends State<AssignHolidayScreen> {
                 ElevatedButton.icon(
                   onPressed: uploadExcel,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: Color(0xff2563EB),
                     foregroundColor: Colors.white,
                     elevation: 5,
                     padding: const EdgeInsets.symmetric(
