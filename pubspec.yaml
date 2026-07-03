@@ -74,7 +74,7 @@ dependencies:
   googleapis_auth:
   app_settings: ^7.0.0
   multi_select_flutter:
-
+  month_picker_dialog:
 
 dev_dependencies:
   flutter_test:
@@ -101,6 +101,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/image/
+    - assets/image/logo.png
     - assets/states.json
     - assets/cities.json
 
